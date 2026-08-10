@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>Flaunedex</string>
+    <key>CFBundleName</key>
+    <string>Flaunedex</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>fr</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+
+    <!-- Permission prompts (French) -->
+    <key>NSCameraUsageDescription</key>
+    <string>Flaunedex utilise l'appareil photo pour photographier les plantes et les animaux que vous rencontrez et les identifier.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Flaunedex enregistre le lieu de chaque photo pour bâtir la carte de vos observations.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Flaunedex peut enregistrer vos photos d'observation dans votre photothèque.</string>
+
+    <!-- Export compliance: no non-exempt encryption, so TestFlight shows the build immediately -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+
+    <key>UILaunchScreen</key>
+    <dict/>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+</dict>
+</plist>

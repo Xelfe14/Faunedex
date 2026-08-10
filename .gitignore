@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+DerivedData/
+build/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+
+# XcodeGen output (generated from project.yml — regenerate, don't commit)
+Flaunedex.xcodeproj/
+
+# Swift Package Manager
+Core/.build/
+Core/.swiftpm/
+.build/
+Packages/
+Package.resolved
+
+# Secrets — never commit API keys
+Secrets.xcconfig
+*.env
+
+# Fastlane / CI
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
