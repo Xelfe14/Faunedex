@@ -108,3 +108,95 @@ struct NearbyServiceTests {
         #expect(parsed == nil)
     }
 }
+
+/// The nearby list is the one place that translates many taxa at once, so the
+/// batched Wikidata query gets its own coverage.
+struct BatchedFrenchNamesTests {
+
+    @Test func sparqlListsEveryRequestedTaxon() {
+        let q = WikidataClient.frenchNamesSPARQL(scientificNames: [
+            "Vaccinium myrtillus", "Gentiana purpurea",
+        ])
+        #expect(q.contains("VALUES ?taxonName"))
+        #expect(q.contains("\"Vaccinium myrtillus\""))
+        #expect(q.contains("\"Gentiana purpurea\""))
+        #expect(q.contains("wdt:P225"), "matches on taxon name")
+        #expect(q.contains("wdt:P1843"), "reads the vernacular-name property")
+        #expect(q.contains("LANG(?fr) = \"fr\""))
+    }
+
+    @Test func sparqlEscapesQuotesSoAQuoteCannotBreakTheQuery() {
+        let q = WikidataClient.frenchNamesSPARQL(scientificNames: ["Bad \" name"])
+        #expect(q.contains("\\\""), "embedded quote is escaped")
+    }
+
+    @Test func parsesNameMap() throws {
+        let json = """
+        { "results": { "bindings": [
+          { "taxonName": {"value": "Vaccinium myrtillus"}, "fr": {"value": "Myrtille"} },
+          { "taxonName": {"value": "Gentiana purpurea"}, "fr": {"value": "Gentiane pourpre"} }
+        ] } }
+        """
+        let map = try WikidataClient.parseFrenchNames(Data(json.utf8))
+        #expect(map["Vaccinium myrtillus"] == "Myrtille")
+        #expect(map["Gentiana purpurea"] == "Gentiane pourpre")
+    }
+
+    @Test func firstLabelWinsWhenATaxonHasSeveral() throws {
+        let json = """
+        { "results": { "bindings": [
+          { "taxonName": {"value": "Picea abies"}, "fr": {"value": "Épicéa commun"} },
+          { "taxonName": {"value": "Picea abies"}, "fr": {"value": "Sapin rouge"} }
+        ] } }
+        """
+        let map = try WikidataClient.parseFrenchNames(Data(json.utf8))
+        #expect(map["Picea abies"] == "Épicéa commun")
+        #expect(map.count == 1)
+    }
+
+    @Test func emptyAndMalformedRowsAreSkipped() throws {
+        let json = """
+        { "results": { "bindings": [
+          { "taxonName": {"value": "A"}, "fr": {"value": ""} },
+          { "fr": {"value": "orphelin"} },
+          { "taxonName": {"value": "B"} }
+        ] } }
+        """
+        let map = try WikidataClient.parseFrenchNames(Data(json.utf8))
+        #expect(map.isEmpty)
+    }
+}
+
+/// Display names come from user-contributed vocabularies, so the casing rule
+/// gets its own coverage.
+struct SuggestionDisplayNameTests {
+
+    private func make(french: String? = nil, english: String? = nil,
+                      scientific: String = "Picea abies") -> NearbySuggestion {
+        NearbySuggestion(speciesKey: 1, occurrenceCount: 1, scientificName: scientific,
+                         frenchName: french, englishName: english)
+    }
+
+    @Test func capitalisesLowercaseVernacular() {
+        #expect(make(french: "myrtille commune").displayName == "Myrtille commune")
+    }
+
+    @Test func leavesProperNounsIntact() {
+        #expect(make(french: "Laurier-rose des Alpes").displayName == "Laurier-rose des Alpes",
+                "only the first character is touched, so 'Alpes' keeps its capital")
+    }
+
+    @Test func prefersFrenchThenEnglishThenScientific() {
+        #expect(make(french: "Épicéa commun", english: "Norway Spruce").displayName == "Épicéa commun")
+        #expect(make(english: "Norway Spruce").displayName == "Norway Spruce")
+        #expect(make().displayName == "Picea abies")
+    }
+
+    @Test func handlesAccentedFirstLetter() {
+        #expect(make(french: "épicéa commun").displayName == "Épicéa commun")
+    }
+
+    @Test func emptyNameDoesNotCrash() {
+        #expect(make(french: "", english: "Fallback").displayName == "")
+    }
+}

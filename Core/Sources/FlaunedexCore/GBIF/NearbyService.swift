@@ -14,7 +14,15 @@ public struct NearbySuggestion: Sendable, Equatable, Identifiable {
     public let animalGroup: AnimalGroup?
 
     public var id: Int { speciesKey }
-    public var displayName: String { frenchName ?? englishName ?? scientificName }
+    /// Common name for display, first letter capitalised. Vernacular sources are
+    /// user-contributed and inconsistently cased ("myrtille commune" next to
+    /// "Gentiane Pourpre"); only the first character is touched so proper nouns
+    /// like "Laurier-rose des Alpes" survive intact.
+    public var displayName: String {
+        let raw = frenchName ?? englishName ?? scientificName
+        guard let first = raw.first else { return raw }
+        return first.uppercased() + raw.dropFirst()
+    }
 
     public init(
         speciesKey: Int, occurrenceCount: Int, scientificName: String,
@@ -144,23 +152,73 @@ public struct NearbyService: Sendable {
         let facet = try GBIFResponses.parseCountryFacet(data)
         let ranked = Self.rank(facet: facet, excluding: collectedKeys, limit: limit)
 
-        var results: [NearbySuggestion] = []
+        var details: [(entry: (key: Int, count: Int), taxon: TaxonMatch)] = []
         for entry in ranked {
             guard let detail = try? await speciesDetail(key: entry.key) else { continue }
-            results.append(
-                NearbySuggestion(
-                    speciesKey: entry.key,
-                    occurrenceCount: entry.count,
-                    scientificName: detail.canonicalName,
-                    frenchName: nil,
-                    englishName: detail.vernacularName,
-                    family: detail.family,
-                    realm: detail.realm,
-                    animalGroup: detail.realm == .animal ? AnimalGroupClassifier.classify(detail) : nil
-                )
+            details.append((entry, detail))
+        }
+
+        // One batched Wikidata query translates every suggestion at once, so a
+        // French app doesn't show a list of English labels.
+        let frenchNames = await frenchNames(
+            for: details.map { (key: $0.entry.key, scientificName: $0.taxon.canonicalName) }
+        )
+
+        return details.map { item in
+            NearbySuggestion(
+                speciesKey: item.entry.key,
+                occurrenceCount: item.entry.count,
+                scientificName: item.taxon.canonicalName,
+                frenchName: frenchNames[item.taxon.canonicalName],
+                englishName: item.taxon.vernacularName,
+                family: item.taxon.family,
+                realm: item.taxon.realm,
+                animalGroup: item.taxon.realm == .animal ? AnimalGroupClassifier.classify(item.taxon) : nil
             )
         }
-        return results
+    }
+
+    /// French common names for a batch of taxa, keyed by scientific name.
+    ///
+    /// Wikidata answers for the whole batch in one request, but its P1843
+    /// coverage is patchy (verified live: 3 of 5 alpine plants). The taxa it
+    /// misses are then looked up concurrently in GBIF's own vernacular list, so
+    /// a French app rarely has to fall back to an English label. Best-effort
+    /// throughout — any failure just leaves the fallback in place.
+    private func frenchNames(
+        for taxa: [(key: Int, scientificName: String)]
+    ) async -> [String: String] {
+        guard !taxa.isEmpty else { return [:] }
+
+        var resolved: [String: String] = [:]
+        if let data = try? await http.getData(
+            WikidataClient.frenchNamesURL(scientificNames: taxa.map(\.scientificName))
+        ), let map = try? WikidataClient.parseFrenchNames(data) {
+            resolved = map
+        }
+
+        let missing = taxa.filter { resolved[$0.scientificName] == nil }
+        guard !missing.isEmpty else { return resolved }
+
+        let fallbacks = await withTaskGroup(of: (String, String?).self) { group in
+            for taxon in missing {
+                group.addTask {
+                    guard let data = try? await http.getData(
+                        GBIFEndpoints.vernacularNames(speciesKey: taxon.key)
+                    ), let names = try? GBIFResponses.parseVernacular(data) else {
+                        return (taxon.scientificName, nil)
+                    }
+                    return (taxon.scientificName, names.french)
+                }
+            }
+            var found: [String: String] = [:]
+            for await (name, french) in group {
+                if let french, !french.isEmpty { found[name] = french }
+            }
+            return found
+        }
+
+        return resolved.merging(fallbacks) { current, _ in current }
     }
 
     private func speciesDetail(key: Int) async throws -> TaxonMatch {

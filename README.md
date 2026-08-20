@@ -139,15 +139,19 @@ is planned for a future version.
 
 ## Status
 
-- ✅ `FlaunedexCore` — **76 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
+- ✅ `FlaunedexCore` — **86 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
   round-trip and the natural-range unlock rules.
 - ✅ iOS app — builds clean for the iOS 18.5 simulator, launches, and every screen has been
   verified running: Faune/Flore dex, species card, map, journal, stats, Découvertes, settings.
 - ✅ All v1 features implemented: offline scan queue, animal subgroups, stats + achievements,
   new-species celebration, rarity badges, birdsong, nearby suggestions, nature journal, and the
   low-confidence review flow.
+- ✅ Verified live: Wikipedia/Commons image lookup, GBIF nearby suggestions, and batched Wikidata
+  French-name resolution all exercised against the real APIs from the running app.
 - ⏳ Not yet done: run on a **real iPhone** (the camera and CoreLocation can't be exercised in the
-  simulator), then TestFlight. iNaturalist sharing remains the planned v2.
+  simulator), and the account-holder steps in [DEPLOYMENT.md](DEPLOYMENT.md) — Apple Developer
+  enrolment, the iCloud container, **deploying the CloudKit schema to Production**, and TestFlight.
+  iNaturalist sharing remains the planned v2.
 
 ### Known limitations
 
@@ -155,4 +159,6 @@ is planned for a future version.
   but it can only be exercised on a physical device.
 - SwiftUI's `Map` has no built-in clustering; `SightingsMapView` is isolated so an `MKMapView`
   wrapper can replace it if pin counts grow.
-- CloudKit sync needs the paid account and a Production schema deploy before TestFlight.
+- CloudKit sync needs the paid account and a Production schema deploy before TestFlight — see
+  [DEPLOYMENT.md](DEPLOYMENT.md). Until then the app runs local-only and says so in Réglages
+  rather than failing.

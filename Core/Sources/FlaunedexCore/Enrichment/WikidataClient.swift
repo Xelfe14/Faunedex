@@ -75,3 +75,60 @@ public enum WikidataClient {
         return nil
     }
 }
+
+// MARK: - Batched French names
+
+public extension WikidataClient {
+
+    /// SPARQL that resolves French names for many taxa in a single request.
+    ///
+    /// The nearby-suggestions list would otherwise need one round trip per
+    /// species just to translate a label, so the names are fetched together via
+    /// a `VALUES` block.
+    static func frenchNamesSPARQL(scientificNames: [String]) -> String {
+        let values = scientificNames
+            .map { name in
+                let escaped = name
+                    .replacingOccurrences(of: "\\", with: "\\\\")
+                    .replacingOccurrences(of: "\"", with: "\\\"")
+                return "\"\(escaped)\""
+            }
+            .joined(separator: " ")
+        return """
+        SELECT ?taxonName ?fr WHERE {
+          VALUES ?taxonName { \(values) }
+          ?taxon wdt:P225 ?taxonName.
+          ?taxon wdt:P1843 ?fr.
+          FILTER(LANG(?fr) = "fr")
+        }
+        """
+    }
+
+    static func frenchNamesURL(scientificNames: [String]) -> URL {
+        var c = URLComponents(url: FlaunedexConfig.wikidataSPARQL, resolvingAgainstBaseURL: false)!
+        c.queryItems = [
+            URLQueryItem(name: "query", value: frenchNamesSPARQL(scientificNames: scientificNames)),
+            URLQueryItem(name: "format", value: "json"),
+        ]
+        return c.url!
+    }
+
+    /// Parse the batched response into `scientificName -> French name`.
+    /// A taxon with several French labels keeps the first one seen.
+    static func parseFrenchNames(_ data: Data) throws -> [String: String] {
+        struct DTO: Decodable {
+            struct Results: Decodable { let bindings: [[String: Binding]] }
+            struct Binding: Decodable { let value: String? }
+            let results: Results?
+        }
+        let dto = try JSONDecoder().decode(DTO.self, from: data)
+        var map: [String: String] = [:]
+        for row in dto.results?.bindings ?? [] {
+            guard let key = row["taxonName"]?.value,
+                  let name = row["fr"]?.value,
+                  !name.isEmpty else { continue }
+            if map[key] == nil { map[key] = name }
+        }
+        return map
+    }
+}

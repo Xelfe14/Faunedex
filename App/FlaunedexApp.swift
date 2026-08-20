@@ -7,17 +7,14 @@ struct FlaunedexApp: App {
     @State private var connectivity = Connectivity()
 
     let container: ModelContainer
+    let storageMode: StorageMode
 
     init() {
-        let schema = Schema([Species.self, Sighting.self])
-        // `.automatic` uses the CloudKit container from the app's entitlements,
-        // giving free single-user backup + cross-device sync.
-        let config = ModelConfiguration(schema: schema, cloudKitDatabase: .automatic)
-        do {
-            container = try ModelContainer(for: schema, configurations: [config])
-        } catch {
-            fatalError("Impossible de créer le ModelContainer : \(error)")
-        }
+        // Opens CloudKit-backed storage when possible and falls back rather than
+        // crashing — see Persistence for why each level exists.
+        let opened = Persistence.makeContainer()
+        container = opened.container
+        storageMode = opened.mode
 
         #if DEBUG
         if SampleData.isRequested {
@@ -31,8 +28,22 @@ struct FlaunedexApp: App {
             RootTabView()
                 .environment(apiKeys)
                 .environment(connectivity)
-                .tint(.green)
+                .environment(\.storageMode, storageMode)
+                .tint(Theme.brand)
         }
         .modelContainer(container)
+    }
+}
+
+private struct StorageModeKey: EnvironmentKey {
+    static let defaultValue: StorageMode = .localOnly
+}
+
+extension EnvironmentValues {
+    /// Which storage mode the app actually opened with, so Réglages can be
+    /// honest about whether iCloud backup is really running.
+    var storageMode: StorageMode {
+        get { self[StorageModeKey.self] }
+        set { self[StorageModeKey.self] = newValue }
     }
 }
