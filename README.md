@@ -20,7 +20,7 @@ Flaunedex/
 │  │   ├─ GBIF/
 │  │   ├─ Enrichment/
 │  │   └─ Networking/
-│  └─ Tests/FlaunedexCoreTests/  57 tests, run with `swift test` (no Xcode needed)
+│  └─ Tests/FlaunedexCoreTests/  86 tests, run with `swift test` (no Xcode needed)
 ├─ App/                      The iOS app (SwiftUI, SwiftData, AVFoundation, MapKit, CloudKit)
 │  ├─ FlaunedexApp.swift
 │  ├─ Persistence/           SwiftData models (Species, Sighting)
