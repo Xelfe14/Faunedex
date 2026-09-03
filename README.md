@@ -28,7 +28,7 @@ Flaunedex/
 │  │   ├─ Enrichment/
 │  │   ├─ Cuisine/            Recipe units, prompt + schema, text format, dish photos
 │  │   └─ Networking/
-│  └─ Tests/FlaunedexCoreTests/  178 tests, run with `swift test` (no Xcode needed)
+│  └─ Tests/FlaunedexCoreTests/  194 tests, run with `swift test` (no Xcode needed)
 ├─ App/                      The iOS app (SwiftUI, SwiftData, AVFoundation, MapKit, CloudKit)
 │  ├─ FlaunedexApp.swift
 │  ├─ Persistence/           SwiftData models (Species, Sighting, Recipe)
@@ -172,8 +172,10 @@ is planned for a future version.
 
 ## Status
 
-- ✅ `FlaunedexCore` — **178 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
-  round-trip, the natural-range unlock rules, and the recipe text round trip.
+- ✅ `FlaunedexCore` — **194 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
+  round-trip, the natural-range unlock rules, the recipe text round trip, and both pipelines driven
+  end to end over a scripted transport (so the wiring, the error statuses and the graceful
+  degradations are exercised without an API key).
 - ✅ Live endpoint checks, off by default so the suite works on a train:
   `FLAUNEDEX_LIVE=1 swift test --filter LiveEndpointTests`.
 - ✅ iOS app — builds clean for the iOS 18.5 simulator, launches, and every screen has been
