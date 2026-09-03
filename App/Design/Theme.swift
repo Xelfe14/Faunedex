@@ -26,6 +26,11 @@ enum Theme {
     /// Rare / notable highlight.
     static let treasure = Color(light: .init(r: 0.80, g: 0.60, b: 0.12),
                                 dark:  .init(r: 0.95, g: 0.78, b: 0.30))
+    /// Cuisine accent (warm paprika). The cooking section is a different world
+    /// inside the same app, so it gets its own colour rather than borrowing
+    /// Faune's ochre or Flore's green.
+    static let cuisine = Color(light: .init(r: 0.72, g: 0.28, b: 0.18),
+                               dark:  .init(r: 0.93, g: 0.52, b: 0.40))
 
     /// The accent for a realm.
     static func accent(for realm: Realm) -> Color {

@@ -142,3 +142,168 @@ final class Sighting {
         case pendingIdentification, pendingGeocoding, complete, failed, needsReview
     }
 }
+
+/// A recipe in the cook's own bank.
+///
+/// CloudKit-safe on the same terms as `Species` and `Sighting`: every stored
+/// property has a default, there is no unique constraint, and the enums are
+/// held as raw strings behind typed accessors.
+///
+/// Ingredients and steps are stored as arrays of the Codable value types from
+/// FlaunedexCore rather than as their own entities. They are never queried
+/// individually, they are always read and written with the recipe they belong
+/// to, and keeping them inline means the CloudKit schema gains one record type
+/// instead of three.
+@Model
+final class Recipe {
+    var id: UUID = UUID()
+    var title: String = ""
+    var summaryFR: String?
+
+    var servings: Int = 4
+    var prepMinutes: Int = 0
+    var cookMinutes: Int = 0
+
+    var difficultyRaw: String?
+    var courseRaw: String?
+    var cuisine: String?
+
+    var ingredients: [RecipeIngredient] = []
+    var steps: [RecipeStep] = []
+
+    var chefTipFR: String?
+    var allergens: [String] = []
+
+    // MARK: The cook's own layer
+
+    /// Free-form notes the cook adds: what they changed, what they learned,
+    /// what to do differently next time. Never written by the model.
+    var notes: String?
+    /// Tags the cook invents. This is the organisation the app does not impose.
+    var tags: [String] = []
+    var isFavorite: Bool = false
+    /// Position in the manual ordering, so the bank can be arranged by hand.
+    var sortIndex: Int = 0
+    /// How many times the cook says they have actually made this.
+    var timesCooked: Int = 0
+
+    // MARK: Photo of the finished dish
+
+    var photoQuery: String?
+    var imageURLString: String?
+    var thumbURLString: String?
+    /// Downloaded bytes on disk, so a recipe is readable with its picture in a
+    /// kitchen with no signal.
+    var localImagePath: String?
+    var imageArtist: String?
+    var imageLicenseShort: String?
+    var imageLicenseURL: String?
+    var imageSourcePageURL: String?
+    var articleURLString: String?
+
+    // MARK: Provenance
+
+    var sourceRaw: String = Source.gemini.rawValue
+    /// What the cook originally asked for, kept so a revision has context and
+    /// so it is always visible where a recipe came from.
+    var originalPrompt: String?
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
+
+    init(id: UUID = UUID(), title: String, source: Source = .gemini) {
+        self.id = id
+        self.title = title
+        self.sourceRaw = source.rawValue
+    }
+
+    /// Where the recipe came from. A recipe that started with the chatbot but
+    /// has since been rewritten is marked as edited, because after that it is
+    /// the cook's text and should not be presented as the model's.
+    enum Source: String, Codable {
+        case gemini
+        case edited
+        case manual
+
+        var frenchLabel: String {
+            switch self {
+            case .gemini: return "Proposée par Gemini"
+            case .edited: return "Modifiée par vous"
+            case .manual: return "Écrite par vous"
+            }
+        }
+
+        var symbolName: String {
+            switch self {
+            case .gemini: return "sparkles"
+            case .edited: return "pencil"
+            case .manual: return "hand.draw"
+            }
+        }
+    }
+
+    // MARK: Typed accessors
+
+    var source: Source {
+        get { Source(rawValue: sourceRaw) ?? .gemini }
+        set { sourceRaw = newValue.rawValue }
+    }
+    var difficulty: RecipeDifficulty? {
+        get { difficultyRaw.flatMap(RecipeDifficulty.init(rawValue:)) }
+        set { difficultyRaw = newValue?.rawValue }
+    }
+    var course: RecipeCourse? {
+        get { courseRaw.flatMap(RecipeCourse.init(rawValue:)) }
+        set { courseRaw = newValue?.rawValue }
+    }
+
+    var totalMinutes: Int { prepMinutes + cookMinutes }
+    var imageURL: URL? { imageURLString.flatMap(URL.init(string:)) }
+    var articleURL: URL? { articleURLString.flatMap(URL.init(string:)) }
+    var hasNotes: Bool { !(notes ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    // MARK: Bridging to the pure value type
+
+    /// The recipe as the framework-free value Core works with.
+    var draft: RecipeDraft {
+        RecipeDraft(
+            title: title,
+            summaryFR: summaryFR,
+            servings: servings > 0 ? servings : nil,
+            prepMinutes: prepMinutes > 0 ? prepMinutes : nil,
+            cookMinutes: cookMinutes > 0 ? cookMinutes : nil,
+            difficulty: difficulty,
+            course: course,
+            cuisine: cuisine,
+            ingredients: ingredients,
+            steps: steps,
+            chefTipFR: chefTipFR,
+            allergensFR: allergens,
+            photoQuery: photoQuery,
+            tags: tags
+        )
+    }
+
+    /// Overwrite the recipe's content from a draft, leaving the cook's own
+    /// layer (notes, favourite, tags, ordering, photo) untouched unless the
+    /// draft carries something for it.
+    func apply(_ raw: RecipeDraft) {
+        let draft = raw.normalized()
+        title = draft.title
+        summaryFR = draft.summaryFR
+        servings = draft.servings ?? servings
+        prepMinutes = draft.prepMinutes ?? 0
+        cookMinutes = draft.cookMinutes ?? 0
+        difficulty = draft.difficulty
+        course = draft.course
+        cuisine = draft.cuisine
+        ingredients = draft.ingredients
+        steps = draft.steps
+        chefTipFR = draft.chefTipFR
+        allergens = draft.allergensFR
+        if !draft.tags.isEmpty { tags = draft.tags }
+        // A draft parsed back from edited text carries no photo query, so the
+        // one already resolved is kept rather than cleared.
+        if let query = draft.photoQuery { photoQuery = query }
+        updatedAt = .now
+    }
+}

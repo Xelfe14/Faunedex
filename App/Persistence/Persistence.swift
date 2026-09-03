@@ -49,7 +49,7 @@ enum StorageMode: String {
 enum Persistence {
 
     static func makeContainer() -> (container: ModelContainer, mode: StorageMode) {
-        let schema = Schema([Species.self, Sighting.self])
+        let schema = Schema([Species.self, Sighting.self, Recipe.self])
 
         if let container = try? ModelContainer(
             for: schema,

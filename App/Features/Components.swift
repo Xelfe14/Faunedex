@@ -7,6 +7,10 @@ struct RemoteImage: View {
     let urlString: String?
     var contentMode: ContentMode = .fill
     var symbol: String = "leaf"
+    /// Placeholder colour. Defaults to the forest brand, but the cooking
+    /// section passes its own so an empty recipe card does not sit under a
+    /// green leaf tint that belongs to the other half of the app.
+    var tint: Color = Theme.brand
 
     var body: some View {
         if let urlString, let url = URL(string: urlString) {
@@ -17,7 +21,7 @@ struct RemoteImage: View {
                 case .failure:
                     placeholder
                 case .empty:
-                    ZStack { placeholderBase; ProgressView().tint(Theme.brand) }
+                    ZStack { placeholderBase; ProgressView().tint(tint) }
                 @unknown default:
                     placeholder
                 }
@@ -28,7 +32,7 @@ struct RemoteImage: View {
     }
 
     private var placeholderBase: some View {
-        LinearGradient(colors: [Theme.brand.opacity(0.10), Theme.brand.opacity(0.04)],
+        LinearGradient(colors: [tint.opacity(0.10), tint.opacity(0.04)],
                        startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
@@ -37,7 +41,7 @@ struct RemoteImage: View {
             placeholderBase
             Image(systemName: symbol)
                 .font(.system(size: 26, weight: .light))
-                .foregroundStyle(Theme.brand.opacity(0.45))
+                .foregroundStyle(tint.opacity(0.45))
         }
     }
 }

@@ -45,8 +45,9 @@ CloudKit builds its schema from what the app actually saves — it starts empty.
 3. In **Réglages** inside the app, confirm it now reads **"Sauvegarde iCloud
    active"**. If it says *"iCloud non connecté"*, the device isn't signed in and
    nothing will sync.
-4. Capture at least one sighting (or run with `-seedSampleData`) so that both
-   record types — `CD_Species` and `CD_Sighting` — get created.
+4. Capture at least one sighting **and save at least one recipe** (or run with
+   `-seedSampleData`, which creates both) so that all three record types get
+   created: `CD_Species`, `CD_Sighting` and `CD_Recipe`.
 
 ## 4. Deploy the schema to Production ⚠️
 
@@ -56,8 +57,8 @@ only exists in Development simply isn't there for them.
 
 1. Open <https://icloud.developer.apple.com/dashboard/>.
 2. Select the container `iCloud.com.taddeocarpinelli.flaunedex`.
-3. **Schema → Indexes / Record Types** — check `CD_Species` and `CD_Sighting`
-   are listed under *Development*.
+3. **Schema → Indexes / Record Types** — check `CD_Species`, `CD_Sighting` and
+   `CD_Recipe` are listed under *Development*.
 4. Click **Deploy Schema Changes…** → review → **Deploy to Production**.
 
 Re-do this **any time the SwiftData models change** (new field, new entity).

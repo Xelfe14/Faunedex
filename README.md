@@ -1,11 +1,18 @@
 # 🌿 Flaunedex
 
-A personal **Pokédex for European flora & fauna**. Photograph a plant or animal in the field, and
-Google **Gemini** identifies it and writes a readable French card (a *spécificité* + a *fun fact*).
-Each find joins a growing, map-backed, filterable collection — and photographing a species **anywhere**
-unlocks it across **every European country in its natural range**.
+Two things in one app, sharing a design language, a store and a single Gemini key.
 
-Native SwiftUI · SwiftData + iCloud · offline-first.
+**Faune & Flore** is a personal Pokédex for European wildlife. Photograph a plant or animal in the
+field, and Google **Gemini** identifies it and writes a readable French card (a *spécificité* + a
+*fun fact*). Each find joins a growing, map-backed, filterable collection, and photographing a
+species **anywhere** unlocks it across **every European country in its natural range**.
+
+**Cuisine** is a recipe bank. Ask Gemini for a dish and get it back with a real photograph, its
+ingredients, and step-by-step instructions, with every amount in grams, millilitres and degrees
+Celsius. Then make it yours: add your own notes, delete what you do not want, rescale it for a
+different table, or rewrite the whole thing as free text.
+
+Native SwiftUI · SwiftData + iCloud · offline-first · French throughout.
 
 ---
 
@@ -15,17 +22,18 @@ Native SwiftUI · SwiftData + iCloud · offline-first.
 Flaunedex/
 ├─ Core/                     Swift package "FlaunedexCore" — all the framework-independent
 │  ├─ Sources/FlaunedexCore/   logic (Gemini schema + prompt, GBIF taxonomy/distribution,
-│  │   ├─ Domain/              enrichment clients, the assembler). Unit-tested on macOS.
-│  │   ├─ Gemini/
-│  │   ├─ GBIF/
+│  │   ├─ Domain/              enrichment clients, the assembler, and the whole
+│  │   ├─ Gemini/             recipe engine: units, schema, free-text round trip).
+│  │   ├─ GBIF/               Unit-tested on macOS.
 │  │   ├─ Enrichment/
+│  │   ├─ Cuisine/            Recipe units, prompt + schema, text format, dish photos
 │  │   └─ Networking/
-│  └─ Tests/FlaunedexCoreTests/  86 tests, run with `swift test` (no Xcode needed)
+│  └─ Tests/FlaunedexCoreTests/  178 tests, run with `swift test` (no Xcode needed)
 ├─ App/                      The iOS app (SwiftUI, SwiftData, AVFoundation, MapKit, CloudKit)
 │  ├─ FlaunedexApp.swift
-│  ├─ Persistence/           SwiftData models (Species, Sighting)
-│  ├─ Services/              Camera, location, geocoding, keychain, scan queue
-│  └─ Features/              The screens (Dex, Capture, Detail, Map, Journal, Stats, Settings)
+│  ├─ Persistence/           SwiftData models (Species, Sighting, Recipe)
+│  ├─ Services/              Camera, location, geocoding, keychain, scan queue, recipe store
+│  └─ Features/              The screens, with Features/Cuisine/ for the recipe side
 ├─ project.yml               XcodeGen project definition
 ├─ App/Info.plist, App/Flaunedex.entitlements
 └─ README.md
@@ -72,9 +80,11 @@ Wikimedia images) so you can explore the UI immediately:
 xcrun simctl launch booted com.taddeocarpinelli.flaunedex -seedSampleData
 ```
 
-Add `-previewSpeciesDetail` to open a species card directly, or
-`-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages>` to jump
-to any screen. Set these under **Product → Scheme → Edit Scheme → Arguments** to
+That seeds four species and three recipes, all with live Wikimedia images.
+
+Add `-previewSpeciesDetail` or `-previewRecipeDetail` to open a card directly, or
+`-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages|recettes|demander>`
+to jump to any screen. Set these under **Product → Scheme → Edit Scheme → Arguments** to
 use them from Xcode. They are compiled out of Release builds.
 
 In Xcode:
@@ -127,6 +137,29 @@ network returns (`NWPathMonitor`-driven queue).
 
 ---
 
+## How a recipe works (one ask)
+
+1. **Gemini** (same model, same key) returns a structured recipe: title, servings, times, ingredients,
+   numbered steps, a chef's tip, allergens, and tags.
+2. **Units are metric by construction.** The `unit` field in the response schema is an `enum`
+   containing only g, kg, ml, cl, l and the French spoons, so a cup or an ounce is not a discouraged
+   answer, it is an invalid one the API will not emit. Anything that still slips through in prose
+   (a Fahrenheit oven temperature, a pasted "2 cups") is converted before it is ever stored.
+3. **Photograph** — French Wikipedia is searched for the dish, English as a fallback, and the lead
+   image is taken with its Commons licence and credited on the card. It is a real photograph of the
+   real dish, not an image a model invented, and it is cached on disk so the recipe still shows it
+   in a kitchen with no signal.
+4. **Then it is yours.** Add your own notes, delete ingredients or steps, drag them into a different
+   order, rescale for a different number of people, or rewrite the whole recipe as free text. The
+   text round trips: what you type parses straight back into the structured recipe, and the card
+   stops crediting the model.
+
+Rescaling rounds the way a kitchen does: counted things (apples, pastry sheets) become whole
+numbers, spoons round to halves, and weights and volumes get cookbook rounding. Cooking times are
+never scaled, because doubling a batch does not double its baking time.
+
+---
+
 ## Data credits & safety
 
 Data from **GBIF** (CC BY), **Wikidata** (CC0), **Wikimedia Commons** (per-image CC/PD — attribution
@@ -139,13 +172,18 @@ is planned for a future version.
 
 ## Status
 
-- ✅ `FlaunedexCore` — **86 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
-  round-trip and the natural-range unlock rules.
+- ✅ `FlaunedexCore` — **178 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
+  round-trip, the natural-range unlock rules, and the recipe text round trip.
+- ✅ Live endpoint checks, off by default so the suite works on a train:
+  `FLAUNEDEX_LIVE=1 swift test --filter LiveEndpointTests`.
 - ✅ iOS app — builds clean for the iOS 18.5 simulator, launches, and every screen has been
   verified running: Faune/Flore dex, species card, map, journal, stats, Découvertes, settings.
 - ✅ All v1 features implemented: offline scan queue, animal subgroups, stats + achievements,
   new-species celebration, rarity badges, birdsong, nearby suggestions, nature journal, and the
   low-confidence review flow.
+- ✅ Cuisine: recipe bank with search, your own tags, favourites and hand ordering; ask Gemini for a
+  dish or a variation of one you have; real dish photographs with attribution; per-recipe notes;
+  swipe-delete and drag-reorder of ingredients and steps; rescaling; and full free-text editing.
 - ✅ Verified live: Wikipedia/Commons image lookup, GBIF nearby suggestions, and batched Wikidata
   French-name resolution all exercised against the real APIs from the running app.
 - ⏳ Not yet done: run on a **real iPhone** (the camera and CoreLocation can't be exercised in the

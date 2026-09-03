@@ -24,6 +24,9 @@ public enum FlaunedexConfig {
 
     // MARK: Wikimedia / Wikidata
     public static let wikipediaActionAPI = URL(string: "https://en.wikipedia.org/w/api.php")!
+    /// French Wikipedia, searched first for dish photos: the recipe titles are
+    /// French, and its search resolves near-misses to the right article.
+    public static let frenchWikipediaActionAPI = URL(string: "https://fr.wikipedia.org/w/api.php")!
     public static let commonsActionAPI = URL(string: "https://commons.wikimedia.org/w/api.php")!
     public static let wikidataSPARQL = URL(string: "https://query.wikidata.org/sparql")!
 

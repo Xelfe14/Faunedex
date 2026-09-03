@@ -60,8 +60,172 @@ enum SampleData {
                 context.insert(sighting)
             }
         }
+        seedRecipes(into: context)
         try? context.save()
     }
+
+    /// Three real recipes with real Wikimedia photographs, so the cooking
+    /// section can be explored (and screenshotted) without an API key. The
+    /// first is deliberately marked as edited and carries a cook's note, since
+    /// that is the state most recipes end up in.
+    static func seedRecipes(into context: ModelContext) {
+        let existing = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
+        guard existing.isEmpty else { return }
+
+        for (index, spec) in recipeSpecs.enumerated() {
+            let recipe = Recipe(title: spec.title, source: spec.source)
+            recipe.summaryFR = spec.summary
+            recipe.servings = spec.servings
+            recipe.prepMinutes = spec.prep
+            recipe.cookMinutes = spec.cook
+            recipe.difficulty = spec.difficulty
+            recipe.course = spec.course
+            recipe.cuisine = spec.cuisine
+            recipe.ingredients = spec.ingredients
+            recipe.steps = spec.steps
+            recipe.chefTipFR = spec.tip
+            recipe.allergens = spec.allergens
+            recipe.tags = spec.tags
+            recipe.notes = spec.notes
+            recipe.isFavorite = spec.favorite
+            recipe.timesCooked = spec.timesCooked
+            recipe.sortIndex = index
+            recipe.photoQuery = spec.title
+            recipe.imageURLString = spec.imageURL
+            recipe.thumbURLString = spec.imageURL
+            recipe.imageArtist = spec.artist
+            recipe.imageLicenseShort = "CC BY-SA 4.0"
+            recipe.articleURLString = spec.articleURL
+            recipe.originalPrompt = spec.prompt
+            recipe.createdAt = Date().addingTimeInterval(-Double(index) * 172_800)
+            context.insert(recipe)
+        }
+    }
+
+    private struct RecipeSpec {
+        let title: String
+        let summary: String
+        let servings: Int
+        let prep: Int
+        let cook: Int
+        let difficulty: RecipeDifficulty
+        let course: RecipeCourse
+        let cuisine: String
+        let ingredients: [RecipeIngredient]
+        let steps: [RecipeStep]
+        let tip: String
+        let allergens: [String]
+        let tags: [String]
+        let notes: String?
+        let favorite: Bool
+        let timesCooked: Int
+        let source: Recipe.Source
+        let imageURL: String
+        let artist: String
+        let articleURL: String
+        let prompt: String
+    }
+
+    private static let recipeSpecs: [RecipeSpec] = [
+        RecipeSpec(
+            title: "Tarte Tatin",
+            summary: "Une tarte renversée aux pommes caramélisées, servie tiède.",
+            servings: 6, prep: 30, cook: 45,
+            difficulty: .moyen, course: .dessert, cuisine: "française",
+            ingredients: [
+                RecipeIngredient(quantity: 8, name: "pommes", note: "Reine des reinettes"),
+                RecipeIngredient(quantity: 150, unit: .gram, name: "sucre"),
+                RecipeIngredient(quantity: 100, unit: .gram, name: "beurre demi-sel"),
+                RecipeIngredient(quantity: 1, name: "pâte feuilletée"),
+                RecipeIngredient(quantity: 1, unit: .tablespoon, name: "eau"),
+            ],
+            steps: [
+                RecipeStep(text: "Préchauffer le four à 180 °C."),
+                RecipeStep(text: "Éplucher les pommes, les couper en quartiers et retirer les cœurs."),
+                RecipeStep(text: "Faire un caramel à sec avec le sucre et l'eau, jusqu'à une couleur ambrée."),
+                RecipeStep(text: "Hors du feu, ajouter le beurre en morceaux et mélanger."),
+                RecipeStep(text: "Ranger les quartiers de pommes serrés sur le caramel, bombé vers le bas."),
+                RecipeStep(text: "Recouvrir de pâte, rentrer les bords, piquer, puis enfourner.", minutes: 45),
+                RecipeStep(text: "Laisser tiédir avant de démouler d'un geste franc.", minutes: 10),
+            ],
+            tip: "Attendre que le caramel prenne une vraie couleur ambrée avant d'ajouter le beurre : trop clair, il sera fade, et la tarte n'aura pas son amertume.",
+            allergens: ["gluten", "lait"],
+            tags: ["classique", "de saison", "dessert"],
+            notes: "Testé avec des poires : bon aussi, mais il faut réduire la cuisson de 10 minutes.\nLe moule en fonte donne un bien meilleur caramel que le moule à manqué.",
+            favorite: true, timesCooked: 3, source: .edited,
+            imageURL: "https://upload.wikimedia.org/wikipedia/commons/e/e5/Tarte_Tatin_a_la_Michalak.jpg",
+            artist: "Shani Evenstein",
+            articleURL: "https://fr.wikipedia.org/wiki/Tarte_Tatin",
+            prompt: "une tarte tatin comme à la maison"
+        ),
+        RecipeSpec(
+            title: "Blanquette de veau à l'ancienne",
+            summary: "Un ragoût de veau en sauce blanche, avec ses carottes et ses champignons.",
+            servings: 6, prep: 30, cook: 90,
+            difficulty: .moyen, course: .plat, cuisine: "française",
+            ingredients: [
+                RecipeIngredient(quantity: 1.2, unit: .kilogram, name: "épaule de veau", note: "en cubes"),
+                RecipeIngredient(quantity: 3, name: "carottes"),
+                RecipeIngredient(quantity: 1, name: "oignon", note: "piqué de 2 clous de girofle"),
+                RecipeIngredient(quantity: 250, unit: .gram, name: "champignons de Paris"),
+                RecipeIngredient(quantity: 50, unit: .gram, name: "beurre"),
+                RecipeIngredient(quantity: 50, unit: .gram, name: "farine"),
+                RecipeIngredient(quantity: 20, unit: .centiliter, name: "crème fraîche épaisse"),
+                RecipeIngredient(quantity: 1, name: "jaune d'œuf"),
+                RecipeIngredient(name: "Sel", note: "au goût"),
+            ],
+            steps: [
+                RecipeStep(text: "Mettre le veau dans une cocotte, couvrir d'eau froide et porter à frémissement."),
+                RecipeStep(text: "Écumer soigneusement, puis ajouter les carottes et l'oignon clouté."),
+                RecipeStep(text: "Laisser mijoter à couvert, à tout petits bouillons.", minutes: 75),
+                RecipeStep(text: "Faire un roux blanc avec le beurre et la farine, sans le colorer."),
+                RecipeStep(text: "Détendre le roux avec le bouillon de cuisson filtré, jusqu'à une sauce nappante."),
+                RecipeStep(text: "Ajouter les champignons et laisser cuire.", minutes: 10),
+                RecipeStep(text: "Hors du feu, lier avec la crème mélangée au jaune d'œuf. Ne plus faire bouillir."),
+            ],
+            tip: "La liaison crème et jaune d'œuf se fait hors du feu : si la sauce rebout ensuite, le jaune coagule et la sauce tranche.",
+            allergens: ["lait", "gluten", "œuf"],
+            tags: ["plat mijoté", "dimanche"],
+            notes: nil,
+            favorite: false, timesCooked: 1, source: .gemini,
+            imageURL: "https://upload.wikimedia.org/wikipedia/commons/c/c3/Blanquette_de_veau_%C3%A0_l%27ancienne_04.jpg",
+            artist: "Wikimedia Commons",
+            articleURL: "https://fr.wikipedia.org/wiki/Blanquette_de_veau",
+            prompt: "une blanquette de veau traditionnelle"
+        ),
+        RecipeSpec(
+            title: "Risotto aux champignons",
+            summary: "Un risotto crémeux, monté au beurre et au parmesan.",
+            servings: 4, prep: 15, cook: 25,
+            difficulty: .facile, course: .plat, cuisine: "italienne",
+            ingredients: [
+                RecipeIngredient(quantity: 320, unit: .gram, name: "riz arborio"),
+                RecipeIngredient(quantity: 1, unit: .liter, name: "bouillon de volaille", note: "maintenu chaud"),
+                RecipeIngredient(quantity: 300, unit: .gram, name: "champignons de saison"),
+                RecipeIngredient(quantity: 2, name: "échalotes"),
+                RecipeIngredient(quantity: 10, unit: .centiliter, name: "vin blanc sec"),
+                RecipeIngredient(quantity: 60, unit: .gram, name: "parmesan", note: "râpé"),
+                RecipeIngredient(quantity: 40, unit: .gram, name: "beurre", note: "très froid"),
+            ],
+            steps: [
+                RecipeStep(text: "Faire suer les échalotes ciselées dans un peu de beurre, sans coloration."),
+                RecipeStep(text: "Ajouter le riz et le nacrer jusqu'à ce que les grains deviennent translucides.", minutes: 2),
+                RecipeStep(text: "Déglacer au vin blanc et laisser évaporer complètement."),
+                RecipeStep(text: "Verser le bouillon chaud louche par louche, en remuant, en attendant l'absorption à chaque fois.", minutes: 18),
+                RecipeStep(text: "Faire sauter les champignons à part, à feu vif, puis les incorporer."),
+                RecipeStep(text: "Hors du feu, monter avec le beurre froid et le parmesan. Couvrir et laisser reposer.", minutes: 2),
+            ],
+            tip: "Le bouillon doit rester chaud : versé froid, il stoppe la cuisson à chaque louche et le riz cuit de façon inégale.",
+            allergens: ["lait", "sulfites"],
+            tags: ["végétarien", "rapide"],
+            notes: nil,
+            favorite: false, timesCooked: 0, source: .gemini,
+            imageURL: "https://upload.wikimedia.org/wikipedia/commons/c/cc/Flickr_-_cyclonebill_-_Risotto_med_citron_og_gr%C3%B8nne_b%C3%B8nner.jpg",
+            artist: "cyclonebill",
+            articleURL: "https://fr.wikipedia.org/wiki/Risotto",
+            prompt: "un risotto aux champignons crémeux"
+        ),
+    ]
 
     // MARK: - Content
 
