@@ -40,16 +40,43 @@ final class ScanCoordinator {
 
     /// Drain every unresolved sighting. Safe to call repeatedly; each item is
     /// idempotent and retried with a cap. Sightings awaiting the user's decision
-    /// (`needsReview`) are skipped — only an explicit retry moves those.
+    /// (`needsReview`) are skipped for identification: only an explicit retry
+    /// moves those.
+    ///
+    /// Geocoding is drained separately from identification because the two fail
+    /// independently. A photo taken in the mountains can be identified from a
+    /// hotel wifi hours later while the country lookup happens to fail; if that
+    /// country were only ever attempted on the identification pass, the sighting
+    /// would be marked complete and lose its country permanently, which quietly
+    /// breaks the "vu ici" markers and the "pays visités" count.
     func processQueue() async {
-        guard keys.hasGeminiKey, !isProcessing else { return }
+        guard !isProcessing else { return }
         isProcessing = true
         defer { isProcessing = false }
 
-        let pending = (try? context.fetch(FetchDescriptor<Sighting>())) ?? []
-        for sighting in pending
+        let all = (try? context.fetch(FetchDescriptor<Sighting>())) ?? []
+
+        for sighting in all where sighting.needsGeocoding {
+            await geocode(sighting)
+        }
+
+        guard keys.hasGeminiKey else {
+            try? context.save()
+            return
+        }
+        for sighting in all
         where sighting.status != .complete && sighting.status != .needsReview && sighting.retryCount < 5 {
             await process(sighting)
+        }
+        try? context.save()
+    }
+
+    /// Resolve the country for one sighting, counting the attempt either way so
+    /// a permanently unresolvable coordinate cannot be retried forever.
+    private func geocode(_ sighting: Sighting) async {
+        sighting.geocodeAttempts += 1
+        if let iso = await geocoder.countryISO(latitude: sighting.latitude, longitude: sighting.longitude) {
+            sighting.countryISO = iso
         }
     }
 
@@ -94,11 +121,8 @@ final class ScanCoordinator {
     }
 
     private func process(_ sighting: Sighting) async {
-        // Reverse-geocode the country (best effort) if not yet done.
-        if sighting.countryISO == nil {
-            sighting.countryISO = await geocoder.countryISO(
-                latitude: sighting.latitude, longitude: sighting.longitude)
-        }
+        // Country resolution is handled by `processQueue`, which retries it on
+        // its own schedule regardless of whether identification succeeded.
 
         // Identify + enrich if still needed.
         if sighting.speciesKey == nil {

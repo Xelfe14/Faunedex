@@ -2,22 +2,34 @@ import Foundation
 @preconcurrency import AVFoundation
 import CoreLocation
 import UIKit
-import Observation
 import FlaunedexCore
 
 /// A minimal custom camera. AVFoundation is required (not `PhotosPicker`)
 /// because only owning the capture callback lets us pair the exact frame with
-/// the exact GPS fix — and AVFoundation does **not** embed EXIF GPS on its own,
+/// the exact GPS fix, and AVFoundation does **not** embed EXIF GPS on its own,
 /// so we inject it before writing the JPEG.
-@Observable
-final class CameraModel: NSObject, AVCapturePhotoCaptureDelegate {
+///
+/// Concurrency: three different execution contexts touch this object. The views
+/// call it from the main actor, configuration and start/stop run on
+/// `sessionQueue`, and `AVCapturePhotoOutput` delivers its delegate callback on
+/// a queue of its own choosing. The mutable state is therefore split
+/// deliberately: `isConfigured` is only ever read or written on `sessionQueue`,
+/// and the pending continuation plus its location are guarded by `lock`. That
+/// discipline is what `@unchecked Sendable` is asserting here.
+final class CameraModel: NSObject, @unchecked Sendable, AVCapturePhotoCaptureDelegate {
     let session = AVCaptureSession()
     private let output = AVCapturePhotoOutput()
     private let sessionQueue = DispatchQueue(label: "com.taddeocarpinelli.flaunedex.camera")
+
+    /// Guards `captureContinuation` and `pendingLocation`, which are written on
+    /// the main actor and read on AVFoundation's delivery queue.
+    private let lock = NSLock()
     private var captureContinuation: CheckedContinuation<Data, Error>?
     private var pendingLocation: CLLocation?
 
-    private(set) var isConfigured = false
+    /// Only touched on `sessionQueue`.
+    private var isConfigured = false
+
     var authorization: AVAuthorizationStatus { AVCaptureDevice.authorizationStatus(for: .video) }
 
     enum CameraError: Error { case notAuthorized, configurationFailed, captureFailed }
@@ -27,46 +39,62 @@ final class CameraModel: NSObject, AVCapturePhotoCaptureDelegate {
     }
 
     func configure() {
+        let session = self.session
+        let output = self.output
         sessionQueue.async { [weak self] in
             guard let self, !self.isConfigured else { return }
-            self.session.beginConfiguration()
-            self.session.sessionPreset = .photo
-            defer { self.session.commitConfiguration() }
+            session.beginConfiguration()
+            session.sessionPreset = .photo
+            defer { session.commitConfiguration() }
 
             guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
                   let input = try? AVCaptureDeviceInput(device: device),
-                  self.session.canAddInput(input) else { return }
-            self.session.addInput(input)
+                  session.canAddInput(input) else { return }
+            session.addInput(input)
 
-            guard self.session.canAddOutput(self.output) else { return }
-            self.session.addOutput(self.output)
+            guard session.canAddOutput(output) else { return }
+            session.addOutput(output)
             self.isConfigured = true
         }
     }
 
     func start() {
+        let session = self.session
         sessionQueue.async { [weak self] in
-            guard let self, self.isConfigured, !self.session.isRunning else { return }
-            self.session.startRunning()
+            guard let self, self.isConfigured, !session.isRunning else { return }
+            session.startRunning()
         }
     }
 
     func stop() {
-        sessionQueue.async { [weak self] in
-            guard let self, self.session.isRunning else { return }
-            self.session.stopRunning()
+        let session = self.session
+        sessionQueue.async {
+            guard session.isRunning else { return }
+            session.stopRunning()
         }
     }
 
     /// Capture one photo, embedding `location` as EXIF GPS. Returns JPEG bytes.
     func capture(location: CLLocation?) async throws -> Data {
-        pendingLocation = location
         let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+        let output = self.output
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
+            lock.lock()
+            // A shutter tap while a capture is still in flight would otherwise
+            // strand the first continuation.
+            if let pending = captureContinuation {
+                captureContinuation = nil
+                lock.unlock()
+                pending.resume(throwing: CameraError.captureFailed)
+                lock.lock()
+            }
             captureContinuation = cont
+            pendingLocation = location
+            lock.unlock()
+
             sessionQueue.async { [weak self] in
                 guard let self else { return }
-                self.output.capturePhoto(with: settings, delegate: self)
+                output.capturePhoto(with: settings, delegate: self)
             }
         }
     }
@@ -74,21 +102,28 @@ final class CameraModel: NSObject, AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput,
                      didFinishProcessingPhoto photo: AVCapturePhoto,
                      error: Error?) {
+        lock.lock()
+        let cont = captureContinuation
+        let location = pendingLocation
+        captureContinuation = nil
+        pendingLocation = nil
+        lock.unlock()
+
+        guard let cont else { return }
+
         if let error {
-            captureContinuation?.resume(throwing: error)
-            captureContinuation = nil
+            cont.resume(throwing: error)
             return
         }
         guard let raw = photo.fileDataRepresentation() else {
-            captureContinuation?.resume(throwing: CameraError.captureFailed)
-            captureContinuation = nil
+            cont.resume(throwing: CameraError.captureFailed)
             return
         }
         // AVFoundation doesn't embed GPS itself; inject it with the round-tripped
-        // ImageIO helper in FlaunedexCore (falling back to the untagged bytes —
-        // the coordinate is also stored on the Sighting record regardless).
+        // ImageIO helper in FlaunedexCore, falling back to the untagged bytes.
+        // The coordinate is also stored on the Sighting record regardless.
         let data: Data
-        if let location = pendingLocation {
+        if let location {
             data = ExifGPS.inject(
                 into: raw,
                 latitude: location.coordinate.latitude,
@@ -100,7 +135,6 @@ final class CameraModel: NSObject, AVCapturePhotoCaptureDelegate {
         } else {
             data = raw
         }
-        captureContinuation?.resume(returning: data)
-        captureContinuation = nil
+        cont.resume(returning: data)
     }
 }

@@ -113,7 +113,7 @@ immediately.
 
 1. **Gemini** (`gemini-3.6-flash`, `thinking_level: low`, structured JSON) → French names, family,
    realm, animal group, *spécificité*, *fun fact*, season, toxicity note, and — when unsure —
-   candidates for review. iPhone HEIC photos are sent directly.
+   candidates for review. The capture is a JPEG, sent inline as base64.
 2. **GBIF** `species/match` → canonical taxon, family, kingdom → realm + animal sub-group.
 3. **GBIF** occurrence facet + distributions → the **natural-range** country set (native + established,
    introduced-only countries tagged separately).

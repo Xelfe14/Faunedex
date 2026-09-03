@@ -11,7 +11,7 @@ struct SightingsMapView: View {
     @State private var selected: Sighting?
 
     private var located: [Sighting] {
-        sightings.filter { !($0.latitude == 0 && $0.longitude == 0) }
+        sightings.filter(\.hasCoordinate)
     }
 
     var body: some View {

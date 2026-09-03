@@ -99,6 +99,11 @@ final class Sighting {
     var horizontalAccuracy: Double = -1
     var capturedAt: Date = Date.now
     var countryISO: String?
+    /// How many times the reverse geocode has been tried. The country lookup is
+    /// online-only and independent of identification, so it needs its own
+    /// counter: a sighting identified from cache while the geocoder was
+    /// unreachable would otherwise keep its country empty forever.
+    var geocodeAttempts: Int = 0
     var note: String?
 
     /// Set once the queued scan resolves to a species key.
@@ -124,6 +129,14 @@ final class Sighting {
         get { Status(rawValue: statusRaw) ?? .pendingIdentification }
         set { statusRaw = newValue.rawValue }
     }
+
+    /// A capture taken with no usable GPS fix is stored at (0, 0). Those are
+    /// hidden from the map and must never be reverse-geocoded, since (0, 0) is
+    /// a real point in the Atlantic.
+    var hasCoordinate: Bool { !(latitude == 0 && longitude == 0) }
+
+    /// Whether the country still needs looking up, and is still worth retrying.
+    var needsGeocoding: Bool { countryISO == nil && hasCoordinate && geocodeAttempts < 5 }
 
     enum Status: String, Codable {
         case pendingIdentification, pendingGeocoding, complete, failed, needsReview

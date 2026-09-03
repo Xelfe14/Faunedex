@@ -57,10 +57,12 @@ public struct SpeciesIdentificationPipeline: Sendable {
             return Outcome(identification: id, taxon: nil, record: nil)
         }
 
-        // 2. Canonical taxonomy — required for a proper, dedupable card.
-        guard let taxon = try await gbif.match(name: scientificName), taxon.isTrustworthy() else {
-            let untrusted = try? await gbif.match(name: scientificName)
-            return Outcome(identification: id, taxon: untrusted, record: nil)
+        // 2. Canonical taxonomy, required for a proper, dedupable card. The
+        // match is fetched once and reused for the untrustworthy path, which
+        // used to repeat the identical request just to hand it back.
+        let matched = try await gbif.match(name: scientificName)
+        guard let taxon = matched, taxon.isTrustworthy() else {
+            return Outcome(identification: id, taxon: matched, record: nil)
         }
 
         // 3. Distribution (natural-range unlock).

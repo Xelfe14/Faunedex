@@ -152,10 +152,24 @@ public struct NearbyService: Sendable {
         let facet = try GBIFResponses.parseCountryFacet(data)
         let ranked = Self.rank(facet: facet, excluding: collectedKeys, limit: limit)
 
-        var details: [(entry: (key: Int, count: Int), taxon: TaxonMatch)] = []
-        for entry in ranked {
-            guard let detail = try? await speciesDetail(key: entry.key) else { continue }
-            details.append((entry, detail))
+        // Up to `limit` species records are needed. Fetching them one after the
+        // other made the list wait on a dozen sequential round trips, so they
+        // are fetched together and put back into rank order afterwards.
+        let resolved = await withTaskGroup(of: (Int, TaxonMatch?).self) { group in
+            for entry in ranked {
+                group.addTask {
+                    (entry.key, try? await self.speciesDetail(key: entry.key))
+                }
+            }
+            var byKey: [Int: TaxonMatch] = [:]
+            for await (key, taxon) in group {
+                if let taxon { byKey[key] = taxon }
+            }
+            return byKey
+        }
+        let details: [(entry: (key: Int, count: Int), taxon: TaxonMatch)] = ranked.compactMap { entry in
+            guard let taxon = resolved[entry.key] else { return nil }
+            return (entry, taxon)
         }
 
         // One batched Wikidata query translates every suggestion at once, so a
