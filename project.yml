@@ -35,6 +35,10 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.taddeocarpinelli.flaunedex
+        # iPhone only. XcodeGen otherwise defaults to iPhone + iPad, which makes
+        # App Store Connect demand iPad screenshots and App Review test a
+        # portrait-locked camera app on an iPad. It still installs on iPads.
+        TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_FILE: App/Info.plist
         CODE_SIGN_ENTITLEMENTS: App/Flaunedex.entitlements
         CODE_SIGN_STYLE: Automatic

@@ -35,6 +35,13 @@
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
 
+    <!-- CloudKit announces changes made on another device with a silent push;
+         without this the app only notices them the next time it is opened. -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+    </array>
+
     <key>UILaunchScreen</key>
     <dict/>
     <key>UISupportedInterfaceOrientations</key>
