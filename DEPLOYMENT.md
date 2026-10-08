@@ -10,6 +10,22 @@ provisioning profiles). Step 1 is therefore the blocker for everything else.
 
 ---
 
+## 0. Xcode 26 or later
+
+Since **28 April 2026**, App Store Connect refuses uploads built with anything
+older than Xcode 26 and the iOS 26 SDK, TestFlight included. This app was last
+built locally for the iOS 18.5 simulator, the newest one Xcode 16.4 ships, so
+check which Xcode that Mac has before archiving.
+
+1. `xcodebuild -version` must print **Xcode 26** or later.
+2. If not, update Xcode. Any 26.x release is accepted: Xcode 26.0 to 26.3 run on
+   macOS Sequoia 15.6 or later, and Xcode 26.4.1 onwards needs macOS Tahoe 26.2.
+   Older releases are at <https://developer.apple.com/download/all/>.
+
+GitHub Actions already builds every push with Xcode 26
+(`.github/workflows/ci.yml`), so a green run there means the code itself is
+ready; this step is only about the Mac you archive from.
+
 ## 1. Apple Developer Program — $99/year
 
 Required, and not optional here: **both** CloudKit and TestFlight need the paid
@@ -34,6 +50,9 @@ The entitlements file already asks for `iCloud.com.taddeocarpinelli.flaunedex`.
 
 1. **Signing & Capabilities → + Capability → iCloud**, tick **CloudKit**.
 2. In the containers list, tick (or create) `iCloud.com.taddeocarpinelli.flaunedex`.
+3. Leave **Push Notifications** and **Background Modes → Remote notifications** on
+   when they appear. They come from the entitlements and `Info.plist`, and are how
+   CloudKit tells the app about changes made on another device.
 
 ## 3. Populate the Development schema
 
@@ -48,6 +67,12 @@ CloudKit builds its schema from what the app actually saves — it starts empty.
 4. Capture at least one sighting **and save at least one recipe** (or run with
    `-seedSampleData`, which creates both) so that all three record types get
    created: `CD_Species`, `CD_Sighting` and `CD_Recipe`.
+
+Do this on the **iPhone**, with your Gemini key pasted into Réglages, and make
+the sighting a real scan and the recipe a real request. The camera only works on
+a device, and these are the first two Gemini calls the app will ever make
+against the real API: everything around them is tested, the calls themselves
+are not. If a scan fails, that is the place to look before uploading anything.
 
 ## 4. Deploy the schema to Production ⚠️
 
@@ -90,6 +115,8 @@ you won't be blocked by the export-compliance question.
 
 | Check | Where |
 |---|---|
+| Xcode new enough to upload | `xcodebuild -version` → 26 or later |
+| Code builds with Xcode 26 | GitHub → **Actions** → latest *CI* run is green |
 | Signing identity exists | `security find-identity -v -p codesigning` |
 | iCloud actually syncing | app → **Réglages** → *Sauvegarde* row |
 | Schema deployed | CloudKit Console → Schema → **Production** tab |

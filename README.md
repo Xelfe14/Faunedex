@@ -27,15 +27,17 @@ Flaunedex/
 │  │   ├─ GBIF/               Unit-tested on macOS.
 │  │   ├─ Enrichment/
 │  │   ├─ Cuisine/            Recipe units, prompt + schema, text format, dish photos
+│  │   ├─ Media/              EXIF GPS tagging, and the GPS-free copy sent to Gemini
 │  │   └─ Networking/
-│  └─ Tests/FlaunedexCoreTests/  194 tests, run with `swift test` (no Xcode needed)
+│  └─ Tests/FlaunedexCoreTests/  199 tests, run with `swift test` (no Xcode needed)
 ├─ App/                      The iOS app (SwiftUI, SwiftData, AVFoundation, MapKit, CloudKit)
 │  ├─ FlaunedexApp.swift
 │  ├─ Persistence/           SwiftData models (Species, Sighting, Recipe)
 │  ├─ Services/              Camera, location, geocoding, keychain, scan queue, recipe store
 │  └─ Features/              The screens, with Features/Cuisine/ for the recipe side
 ├─ project.yml               XcodeGen project definition
-├─ App/Info.plist, App/Flaunedex.entitlements
+├─ App/Info.plist, App/Flaunedex.entitlements, App/PrivacyInfo.xcprivacy
+├─ .github/workflows/ci.yml  Core tests + app builds on Xcode 26, on every push
 └─ README.md
 ```
 
@@ -47,7 +49,8 @@ and **tests on macOS without Xcode**. The Apple-framework code lives in `App/`, 
 
 ## Prerequisites
 
-- **A Mac with full Xcode** (App Store) — not just the Command Line Tools. Needed to build the iOS app.
+- **A Mac with full Xcode 26 or later** — not just the Command Line Tools. Needed to build the iOS
+  app, and App Store Connect has refused uploads built with older Xcode versions since April 2026.
 - **XcodeGen** to generate the `.xcodeproj`: `brew install xcodegen`
 - **A paid Apple Developer account** ($99/yr) — required because the app uses **CloudKit** (and for
   TestFlight). Enroll at <https://developer.apple.com/programs>.
@@ -123,7 +126,9 @@ immediately.
 
 1. **Gemini** (`gemini-3.6-flash`, `thinking_level: low`, structured JSON) → French names, family,
    realm, animal group, *spécificité*, *fun fact*, season, toxicity note, and — when unsure —
-   candidates for review. The capture is a JPEG, sent inline as base64.
+   candidates for review. What is sent, inline as base64, is a copy of the capture: a JPEG at most
+   1600 px on its long edge, turned upright, and stripped of all metadata, so the GPS stays on the
+   phone.
 2. **GBIF** `species/match` → canonical taxon, family, kingdom → realm + animal sub-group.
 3. **GBIF** occurrence facet + distributions → the **natural-range** country set (native + established,
    introduced-only countries tagged separately).
@@ -172,14 +177,19 @@ is planned for a future version.
 
 ## Status
 
-- ✅ `FlaunedexCore` — **194 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
-  round-trip, the natural-range unlock rules, the recipe text round trip, and both pipelines driven
-  end to end over a scripted transport (so the wiring, the error statuses and the graceful
-  degradations are exercised without an API key).
+- ✅ `FlaunedexCore` — **199 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
+  round-trip, the GPS-free upload copy, the natural-range unlock rules, the recipe text round trip,
+  and both pipelines driven end to end over a scripted transport (so the wiring, the error statuses
+  and the graceful degradations are exercised without an API key).
+- ✅ Builds with **Xcode 26** (the iOS 26 SDK App Store Connect requires) on every push, in GitHub
+  Actions: the Core tests, a Release build for iPhone (what an archive compiles) and a Debug build
+  for the simulator, with no compiler warnings. The Release bundle is checked for its privacy
+  manifest, SDK, device family and background modes.
 - ✅ Live endpoint checks, off by default so the suite works on a train:
   `FLAUNEDEX_LIVE=1 swift test --filter LiveEndpointTests`.
-- ✅ iOS app — builds clean for the iOS 18.5 simulator, launches, and every screen has been
-  verified running: Faune/Flore dex, species card, map, journal, stats, Découvertes, settings.
+- ✅ iOS app — launches, and every screen has been verified running in the iOS 18.5 simulator:
+  Faune/Flore dex, species card, map, journal, stats, Découvertes, settings. Nobody has looked at
+  it yet as built with the iOS 26 SDK, which restyles tab bars, navigation bars and sheets by itself.
 - ✅ All v1 features implemented: offline scan queue, animal subgroups, stats + achievements,
   new-species celebration, rarity badges, birdsong, nearby suggestions, nature journal, and the
   low-confidence review flow.
@@ -189,9 +199,10 @@ is planned for a future version.
 - ✅ Verified live: Wikipedia/Commons image lookup, GBIF nearby suggestions, and batched Wikidata
   French-name resolution all exercised against the real APIs from the running app.
 - ⏳ Not yet done: run on a **real iPhone** (the camera and CoreLocation can't be exercised in the
-  simulator), and the account-holder steps in [DEPLOYMENT.md](DEPLOYMENT.md) — Apple Developer
-  enrolment, the iCloud container, **deploying the CloudKit schema to Production**, and TestFlight.
-  iNaturalist sharing remains the planned v2.
+  simulator), a first **real Gemini call** (identification and recipes are tested up to the wire,
+  never against the live API), and the account-holder steps in [DEPLOYMENT.md](DEPLOYMENT.md) —
+  Xcode 26 on the Mac, Apple Developer enrolment, the iCloud container, **deploying the CloudKit
+  schema to Production**, and TestFlight. iNaturalist sharing remains the planned v2.
 
 ### Known limitations
 
