@@ -89,7 +89,9 @@ final class ScanCoordinator {
     /// Re-run identification for an uncertain sighting — either with deeper
     /// reasoning, or confirming a candidate the user picked.
     func retryIdentification(for sighting: Sighting, choosing scientificName: String? = nil) async {
-        guard keys.hasGeminiKey, let data = photos.load(sighting.photoRelativePath) else { return }
+        guard keys.hasGeminiKey,
+              let data = photos.load(sighting.photoRelativePath),
+              let upload = UploadImage.prepare(data) else { return }
         isProcessing = true
         defer { isProcessing = false }
 
@@ -100,7 +102,7 @@ final class ScanCoordinator {
         )
         do {
             let outcome = try await pipeline.run(
-                base64Image: data.base64EncodedString(),
+                base64Image: upload.base64EncodedString(),
                 mimeType: "image/jpeg",
                 keys: bundle,
                 thinkingLevel: .high,
@@ -126,7 +128,10 @@ final class ScanCoordinator {
 
         // Identify + enrich if still needed.
         if sighting.speciesKey == nil {
-            guard let data = photos.load(sighting.photoRelativePath) else {
+            // What is sent is a small, upright copy with no GPS; the capture on
+            // disk keeps its coordinates for the map.
+            guard let data = photos.load(sighting.photoRelativePath),
+                  let upload = UploadImage.prepare(data) else {
                 sighting.status = .failed
                 return
             }
@@ -137,7 +142,7 @@ final class ScanCoordinator {
             )
             do {
                 let outcome = try await pipeline.run(
-                    base64Image: data.base64EncodedString(), mimeType: "image/jpeg", keys: keysBundle)
+                    base64Image: upload.base64EncodedString(), mimeType: "image/jpeg", keys: keysBundle)
                 if let record = outcome.record {
                     link(sighting: sighting, to: record)
                     sighting.status = .complete
