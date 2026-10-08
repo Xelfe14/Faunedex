@@ -58,7 +58,10 @@ public struct GeminiIdentificationService: Sendable {
             ("generationConfig", .obj([
                 ("responseMimeType", .str("application/json")),
                 ("responseSchema", GeminiSchema.responseSchema),
-                ("temperature", .int(0)),
+                // No temperature: Google asks for the default (1.0) on every
+                // Gemini 3 model and warns that lower values can make it loop,
+                // which here would mean truncated JSON and a failed scan. The
+                // response schema is what keeps the answer well-formed.
                 ("thinkingConfig", .obj([("thinkingLevel", .str(thinkingLevel.rawValue))])),
             ])),
         ])

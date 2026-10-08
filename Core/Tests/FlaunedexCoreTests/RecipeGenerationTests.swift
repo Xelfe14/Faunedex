@@ -83,6 +83,7 @@ struct RecipeRequestBodyTests {
         let generation = try #require(object["generationConfig"] as? [String: Any])
         #expect(generation["responseMimeType"] as? String == "application/json")
         #expect(generation["responseSchema"] != nil)
+        #expect(generation["temperature"] == nil, "Gemini 3 models are meant to run at their default temperature")
         #expect(object["systemInstruction"] != nil)
 
         let contents = try #require(object["contents"] as? [[String: Any]])

@@ -20,7 +20,7 @@ struct GeminiTests {
         // generationConfig
         let gen = try #require(obj["generationConfig"] as? [String: Any])
         #expect(gen["responseMimeType"] as? String == "application/json")
-        #expect(gen["temperature"] as? Int == 0)
+        #expect(gen["temperature"] == nil, "Gemini 3 models are meant to run at their default temperature")
         let thinking = try #require(gen["thinkingConfig"] as? [String: Any])
         #expect(thinking["thinkingLevel"] as? String == "low")
 

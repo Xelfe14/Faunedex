@@ -56,10 +56,11 @@ public struct RecipeGenerationService: Sendable {
             ("generationConfig", .obj([
                 ("responseMimeType", .str("application/json")),
                 ("responseSchema", RecipeSchema.responseSchema),
-                // A little warmth: two requests for "tarte aux pommes" should
-                // not return a byte-identical recipe, but the measurements must
-                // not wander either.
-                ("temperature", .double(0.4)),
+                // No temperature: Google asks for the default (1.0) on every
+                // Gemini 3 model and warns that lower values can make it loop.
+                // The default already keeps two requests for "tarte aux pommes"
+                // from coming back byte-identical, and the unit enum in the
+                // schema is what stops the measurements from wandering.
                 ("thinkingConfig", .obj([("thinkingLevel", .str(thinkingLevel.rawValue))])),
             ])),
         ])
