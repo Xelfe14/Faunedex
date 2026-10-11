@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SwiftData
+import UIKit
 import FlaunedexCore
 
 /// Debug-only demo content so the app can be explored (and screenshotted)
@@ -16,10 +17,17 @@ enum SampleData {
     }
 
     static func seed(into context: ModelContext) {
-        // Only seed an empty store, so a real collection is never polluted.
+        // Each section seeds only when it is empty, independently of the
+        // others, so a real collection is never polluted and a section added
+        // later still gets its samples on a device already seeded before.
         let existing = (try? context.fetch(FetchDescriptor<Species>())) ?? []
-        guard existing.isEmpty else { return }
+        if existing.isEmpty { seedSpecies(into: context) }
+        seedRecipes(into: context)
+        seedKnowledge(into: context)
+        try? context.save()
+    }
 
+    private static func seedSpecies(into context: ModelContext) {
         for (index, spec) in specs.enumerated() {
             let species = Species(gbifKey: spec.gbifKey,
                                   scientificName: spec.scientificName,
@@ -60,8 +68,6 @@ enum SampleData {
                 context.insert(sighting)
             }
         }
-        seedRecipes(into: context)
-        try? context.save()
     }
 
     /// Three real recipes with real Wikimedia photographs, so the cooking
@@ -226,6 +232,182 @@ enum SampleData {
             prompt: "un risotto aux champignons crémeux"
         ),
     ]
+
+
+    // MARK: - Savoirs
+
+    /// Real content in nested folders: vocabulary, quotations, dates with links
+    /// and lists, flags drawn as pictures, one card retired, some resting, one
+    /// back from its rest and awaiting confirmation, and a folder fully mastered
+    /// so the "Dossier maîtrisé !" state can be seen.
+    static func seedKnowledge(into context: ModelContext) {
+        let existing = (try? context.fetch(FetchDescriptor<KnowledgeFolder>())) ?? []
+        guard existing.isEmpty else { return }
+        let calendar = Calendar.current
+        let now = Date()
+
+        func folder(_ name: String, _ emoji: String, _ color: FolderColor, _ index: Int,
+                    in parent: KnowledgeFolder? = nil) -> KnowledgeFolder {
+            let folder = KnowledgeFolder(name: name, emoji: emoji, color: color)
+            folder.sortIndex = index
+            context.insert(folder)
+            folder.parent = parent
+            return folder
+        }
+
+        func card(_ folder: KnowledgeFolder, _ recto: RichDocument, _ verso: RichDocument,
+                  image: (id: UUID, data: Data)? = nil, mastery: MasteryState = .fresh,
+                  retired: Bool = false, dealt: Int = 0, hoursAgo: Int = 0) {
+            let card = KnowledgeCard()
+            card.rectoData = try? recto.jsonData()
+            card.versoData = try? verso.jsonData()
+            card.rectoText = recto.plainText
+            card.versoText = verso.plainText
+            card.mastery = mastery
+            card.retiredAt = retired ? now : nil
+            card.timesDealt = dealt
+            card.createdAt = now.addingTimeInterval(-Double(hoursAgo) * 3_600)
+            if mastery.level > 0 { card.lastMasteredAt = now.addingTimeInterval(-10 * 86_400) }
+            context.insert(card)
+            card.folder = folder
+            if let image {
+                let record = KnowledgeImage(id: image.id, data: image.data, pixelWidth: 900, pixelHeight: 600)
+                context.insert(record)
+                record.card = card
+            }
+        }
+
+        /// Resting since ten days ago, so back in about twenty.
+        let resting = MasteryState(level: 1, restUntil: MasteryRule.firstDayBack(
+            after: now.addingTimeInterval(-10 * 86_400), restingDays: 30, calendar: calendar))
+        /// Rest over yesterday: dealt again, waiting for confirmation.
+        let backForConfirmation = MasteryState(level: 1, restUntil: calendar.date(
+            byAdding: .day, value: -1, to: calendar.startOfDay(for: now)))
+
+        // Langues
+        let langues = folder("Langues", "🗣️", .blue, 0)
+        let anglais = folder("Anglais", "🇬🇧", .indigo, 0, in: langues)
+        let italien = folder("Italien", "🇮🇹", .green, 1, in: langues)
+
+        card(anglais, doc(para(.body, run("la bouilloire", bold))),
+             doc(para(.body, run("the kettle", bold)),
+                 para(.quote, run("Mets la bouilloire en route. Put the kettle on."))), hoursAgo: 1)
+        card(anglais, doc(para(.body, run("s'épanouir", bold))),
+             doc(para(.body, run("to thrive, to blossom", bold)),
+                 para(.quote, run("Elle s'épanouit dans son nouveau travail. She is thriving in her new job."))), hoursAgo: 2)
+        card(anglais, doc(para(.body, run("une aubaine", bold))),
+             doc(para(.body, run("a godsend, a windfall", bold))),
+             mastery: backForConfirmation, dealt: 2, hoursAgo: 3)
+        card(anglais, doc(para(.body, run("tergiverser", bold))),
+             doc(para(.body, run("to dither, to beat around the bush", bold))), hoursAgo: 4)
+        card(anglais, doc(para(.body, run("le lendemain", bold))),
+             doc(para(.body, run("the next day", bold))), dealt: 1, hoursAgo: 5)
+        card(anglais, doc(para(.body, run("un casse-tête", bold))),
+             doc(para(.body, run("a puzzle", bold), run(" ; au figuré : "), run("a headache", italic))), hoursAgo: 6)
+
+        card(italien, doc(para(.body, run("la bouilloire", bold))), doc(para(.body, run("il bollitore", bold))), hoursAgo: 7)
+        card(italien, doc(para(.body, run("le lendemain", bold))), doc(para(.body, run("l'indomani", bold))), hoursAgo: 8)
+
+        // Citations
+        let citations = folder("Citations", "📜", .amber, 1)
+        card(citations, doc(para(.quote, run("« Je pense, donc je suis. »"))),
+             doc(para(.heading, run("René Descartes")),
+                 para(.body, run("Discours de la méthode", italic), run(", 1637"))), hoursAgo: 9)
+        card(citations, doc(para(.quote, run("« Carpe diem. »"))),
+             doc(para(.heading, run("Horace")), para(.body, run("Odes", italic), run(", livre I, 11"))),
+             mastery: resting, dealt: 3, hoursAgo: 10)
+        card(citations, doc(para(.quote, run("« L'essentiel est invisible pour les yeux. »"))),
+             doc(para(.heading, run("Antoine de Saint-Exupéry")), para(.body, run("Le Petit Prince", italic), run(", 1943"))),
+             hoursAgo: 11)
+        card(citations, doc(para(.quote, run("« Le cœur a ses raisons que la raison ne connaît point. »"))),
+             doc(para(.heading, run("Blaise Pascal")), para(.body, run("Pensées", italic), run(", 1670"))),
+             retired: true, hoursAgo: 12)
+
+        // Histoire
+        let histoire = folder("Histoire", "🏛️", .red, 2)
+        let dates = folder("Dates", "📅", .orange, 0, in: histoire)
+        let bastille = "https://fr.wikipedia.org/wiki/Prise_de_la_Bastille"
+        card(dates, doc(para(.heading, run("Prise de la Bastille"))),
+             doc(para(.body, run("14 juillet 1789", RichFormat(bold: true, color: .red))),
+                 para(.body, run("Le début symbolique de la Révolution française.")),
+                 para(.body, run("En savoir plus", RichFormat(link: bastille)))), hoursAgo: 13)
+        card(dates, doc(para(.heading, run("Couronnement de Charlemagne"))),
+             doc(para(.body, run("25 décembre 800", bold), run(", à Rome, par le pape Léon III."))), hoursAgo: 14)
+        card(dates, doc(para(.heading, run("Armistice de la Grande Guerre"))),
+             doc(para(.body, run("11 novembre 1918", bold)),
+                 para(.body, run("Signé à Rethondes, dans la forêt de Compiègne."))), hoursAgo: 15)
+        card(dates, doc(para(.heading, run("Chute du mur de Berlin"))),
+             doc(para(.body, run("9 novembre 1989", bold))), dealt: 1, hoursAgo: 16)
+        card(dates, doc(para(.heading, run("Alunissage d'Apollo 11"))),
+             doc(para(.body, run("20 juillet 1969", bold)),
+                 para(.body, run("L'équipage :")),
+                 para(.bullet, run("Neil Armstrong")),
+                 para(.bullet, run("Buzz Aldrin")),
+                 para(.bullet, run("Michael Collins", italic), run(", resté en orbite"))), hoursAgo: 17)
+
+        // Géographie
+        let geographie = folder("Géographie", "🌍", .teal, 3)
+        let drapeaux = folder("Drapeaux", "🚩", .pink, 0, in: geographie)
+        let flags: [(String, [UIColor], String)] = [
+            ("La France", [rgb(0x0055A4), .white, rgb(0xEF4135)], "Bleu, blanc, rouge."),
+            ("L'Italie", [rgb(0x009246), .white, rgb(0xCE2B37)], "Vert, blanc, rouge."),
+            ("La Belgique", [.black, rgb(0xFDDA24), rgb(0xEF3340)], "Noir, jaune, rouge."),
+        ]
+        for (index, flag) in flags.enumerated() {
+            let id = UUID()
+            card(drapeaux,
+                 doc(.image(RichImage(id: id, width: 900, height: 600)), para(.body, run("Quel pays ?", italic))),
+                 doc(para(.heading, run(flag.0)), para(.body, run(flag.2))),
+                 image: (id: id, data: flagImage(flag.1)), hoursAgo: 18 + index)
+        }
+
+        // Philosophie: everything resting, so the folder shows as mastered.
+        let philosophie = folder("Philosophie", "🧠", .purple, 4)
+        card(philosophie, doc(para(.body, run("Qu'est-ce que l'"), run("épistémologie", bold), run(" ?"))),
+             doc(para(.body, run("L'étude critique des sciences et de la connaissance."))),
+             mastery: resting, dealt: 4, hoursAgo: 21)
+        card(philosophie, doc(para(.body, run("Qui a écrit "), run("Du contrat social", italic), run(" ?"))),
+             doc(para(.heading, run("Jean-Jacques Rousseau")), para(.body, run("1762"))),
+             mastery: MasteryState(level: 2, restUntil: calendar.date(byAdding: .day, value: 45, to: calendar.startOfDay(for: now))),
+             dealt: 6, hoursAgo: 22)
+    }
+
+    private static let bold = RichFormat(bold: true)
+    private static let italic = RichFormat(italic: true)
+
+    private static func run(_ text: String, _ format: RichFormat = .plain) -> RichRun {
+        RichRun(text: text, format: format)
+    }
+
+    private static func para(_ style: RichParagraphStyle, _ runs: RichRun...) -> RichBlock {
+        .paragraph(RichParagraph(style: style, runs: runs))
+    }
+
+    private static func doc(_ blocks: RichBlock...) -> RichDocument {
+        RichDocument(blocks: blocks)
+    }
+
+    private static func rgb(_ hex: Int) -> UIColor {
+        UIColor(red: CGFloat((hex >> 16) & 0xFF) / 255,
+                green: CGFloat((hex >> 8) & 0xFF) / 255,
+                blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
+    }
+
+    /// A vertical tricolour, drawn rather than downloaded so the sample works
+    /// offline and needs no licence.
+    private static func flagImage(_ colors: [UIColor]) -> Data {
+        let size = CGSize(width: 900, height: 600)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
+            let stripe = size.width / CGFloat(colors.count)
+            for (index, color) in colors.enumerated() {
+                color.setFill()
+                context.fill(CGRect(x: CGFloat(index) * stripe, y: 0, width: stripe, height: size.height))
+            }
+        }
+        return image.jpegData(compressionQuality: 0.9) ?? Data()
+    }
 
     // MARK: - Content
 

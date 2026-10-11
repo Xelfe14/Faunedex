@@ -1,7 +1,7 @@
 # Mettre Flaunedex sur l'iPhone
 
 Everything in this file requires **signing in with your Apple ID**, so these are
-the steps only you can perform. The app itself is ready — nothing here is a code
+the steps only you can perform. The app itself is ready: nothing here is a code
 change.
 
 Current state of this Mac: **no Apple Developer account is signed into Xcode**
@@ -10,7 +10,7 @@ provisioning profiles). Step 1 is therefore the blocker for everything else.
 
 ---
 
-## 1. Apple Developer Program — $99/year
+## 1. Apple Developer Program ($99/year)
 
 Required, and not optional here: **both** CloudKit and TestFlight need the paid
 program. A free Apple ID cannot provision an iCloud container.
@@ -37,7 +37,7 @@ The entitlements file already asks for `iCloud.com.taddeocarpinelli.flaunedex`.
 
 ## 3. Populate the Development schema
 
-CloudKit builds its schema from what the app actually saves — it starts empty.
+CloudKit builds its schema from what the app actually saves: it starts empty.
 
 1. Sign the **simulator or device** into an iCloud account
    (Réglages → *Se connecter à l'iPhone*).
@@ -45,9 +45,13 @@ CloudKit builds its schema from what the app actually saves — it starts empty.
 3. In **Réglages** inside the app, confirm it now reads **"Sauvegarde iCloud
    active"**. If it says *"iCloud non connecté"*, the device isn't signed in and
    nothing will sync.
-4. Capture at least one sighting **and save at least one recipe** (or run with
-   `-seedSampleData`, which creates both) so that all three record types get
-   created: `CD_Species`, `CD_Sighting` and `CD_Recipe`.
+4. Capture at least one sighting, save at least one recipe, and create at least
+   one knowledge card **with a picture** (or run with `-seedSampleData`, which
+   creates all of them) so that all six record types get created:
+   `CD_Species`, `CD_Sighting`, `CD_Recipe`, `CD_KnowledgeFolder`,
+   `CD_KnowledgeCard` and `CD_KnowledgeImage`. The picture matters: without
+   one, `CD_KnowledgeImage` never appears in the schema, and Production would
+   then refuse to store any card picture.
 
 ## 4. Deploy the schema to Production ⚠️
 
@@ -57,8 +61,9 @@ only exists in Development simply isn't there for them.
 
 1. Open <https://icloud.developer.apple.com/dashboard/>.
 2. Select the container `iCloud.com.taddeocarpinelli.flaunedex`.
-3. **Schema → Indexes / Record Types** — check `CD_Species`, `CD_Sighting` and
-   `CD_Recipe` are listed under *Development*.
+3. **Schema → Indexes / Record Types**: check that all six are listed under
+   *Development*: `CD_Species`, `CD_Sighting`, `CD_Recipe`,
+   `CD_KnowledgeFolder`, `CD_KnowledgeCard` and `CD_KnowledgeImage`.
 4. Click **Deploy Schema Changes…** → review → **Deploy to Production**.
 
 Re-do this **any time the SwiftData models change** (new field, new entity).
@@ -96,5 +101,6 @@ you won't be blocked by the export-compliance question.
 | Build not expired | App Store Connect → TestFlight |
 
 If the app ever shows **"iCloud non connecté"** or **"Stockage local
-uniquement"**, it is still fully usable — sightings are saved on the device and
-simply aren't backed up. The app no longer crashes when CloudKit is unavailable.
+uniquement"**, it is still fully usable: sightings, recipes and cards are saved
+on the device and simply aren't backed up. The app no longer crashes when
+CloudKit is unavailable.

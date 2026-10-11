@@ -195,14 +195,16 @@ struct EmptyStateView: View {
     let title: String
     let message: String
     let systemImage: String
+    /// Each world passes its own colour; the forest green is the default.
+    var tint: Color = Theme.brand
 
     var body: some View {
         VStack(spacing: 14) {
             ZStack {
-                Circle().fill(Theme.brand.opacity(0.10)).frame(width: 108, height: 108)
+                Circle().fill(tint.opacity(0.10)).frame(width: 108, height: 108)
                 Image(systemName: systemImage)
                     .font(.system(size: 42, weight: .light))
-                    .foregroundStyle(Theme.brand)
+                    .foregroundStyle(tint)
             }
             Text(title).font(Theme.display(19))
             Text(message)

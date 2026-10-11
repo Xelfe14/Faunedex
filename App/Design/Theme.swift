@@ -31,6 +31,27 @@ enum Theme {
     /// Faune's ochre or Flore's green.
     static let cuisine = Color(light: .init(r: 0.72, g: 0.28, b: 0.18),
                                dark:  .init(r: 0.93, g: 0.52, b: 0.40))
+    /// Savoirs accent (ink blue): the third world, again with a colour of its
+    /// own, closer to a fountain pen than to a field or a kitchen.
+    static let knowledge = Color(light: .init(r: 0.24, g: 0.27, b: 0.62),
+                                 dark:  .init(r: 0.62, g: 0.66, b: 0.98))
+
+    /// The tint of a knowledge folder. System colours, so each adapts to dark
+    /// mode on its own.
+    static func folder(_ color: FolderColor) -> Color {
+        switch color {
+        case .indigo: return .indigo
+        case .blue: return .blue
+        case .teal: return .teal
+        case .green: return .green
+        case .amber: return treasure
+        case .orange: return .orange
+        case .red: return .red
+        case .pink: return .pink
+        case .purple: return .purple
+        case .slate: return .gray
+        }
+    }
 
     /// The accent for a realm.
     static func accent(for realm: Realm) -> Color {
