@@ -225,13 +225,13 @@ is planned for a future version.
   swipe-delete and drag-reorder of ingredients and steps; rescaling; and full free-text editing.
 - ✅ Saisons: the seasonal fresque with month, shelf and name filters; a card per fruit and vegetable
   with its season, footprint and the recipes that use it; season pictograms and a carbon footprint on
-  every recipe; seasonal cooking by default; and lower-impact versions. Compiles in CI; **not yet seen
-  running** — the screens were built after the last simulator session.
+  every recipe; seasonal cooking by default; and lower-impact versions. Seen running in the iOS 26
+  simulator through CI's screenshots (an artifact on every run); not yet on the iPhone.
 - ✅ Verified live: Wikipedia/Commons image lookup, GBIF nearby suggestions, and batched Wikidata
   French-name resolution all exercised against the real APIs from the running app.
 - ⏳ Not yet done: run on a **real iPhone** (the camera and CoreLocation can't be exercised in the
   simulator), a first **real Gemini call** (identification and recipes are tested up to the wire,
-  never against the live API), a first look at the Saisons screens, and the account-holder steps in
+  never against the live API), the Saisons screens on the iPhone itself, and the account-holder steps in
   [DEPLOYMENT.md](DEPLOYMENT.md) — Apple Developer enrolment, signing, Developer Mode and the install
   from Xcode. iNaturalist sharing remains the planned v2.
 
