@@ -29,3 +29,7 @@ Secrets.xcconfig
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
+
+# Python bytecode (Tools/)
+__pycache__/
+*.pyc
