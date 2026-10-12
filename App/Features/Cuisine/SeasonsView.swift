@@ -100,7 +100,9 @@ struct SeasonsView: View {
             Picker("Catégorie", selection: $category) {
                 Text("Tout").tag(ProduceCategory?.none)
                 ForEach(ProduceCategory.allCases, id: \.self) { category in
-                    Text(category.frenchLabel).tag(ProduceCategory?.some(category))
+                    // "Fruits à coque" doesn't fit a quarter of an iPhone XS.
+                    Text(category == .nut ? "À coque" : category.frenchLabel)
+                        .tag(ProduceCategory?.some(category))
                 }
             }
             .pickerStyle(.segmented)
