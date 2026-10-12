@@ -1,113 +1,107 @@
 # Mettre Flaunedex sur l'iPhone
 
-Everything in this file requires **signing in with your Apple ID**, so these are
-the steps only you can perform. The app itself is ready — nothing here is a code
-change.
+The app is for one person on one phone, an **iPhone XS on iOS 18**, so it is
+installed straight from Xcode: no TestFlight, no App Store Connect, no review.
+Everything here needs **your Apple ID**, so these are the steps only you can
+perform. Nothing in this file is a code change.
 
-Current state of this Mac: **no Apple Developer account is signed into Xcode**
-(`security find-identity -v -p codesigning` reports 0 identities and there are no
-provisioning profiles). Step 1 is therefore the blocker for everything else.
+The app needs **iOS 17 or later**. The XS stops at iOS 18, which is fine: CI
+builds every push against an iOS 17 minimum, so nothing in the code needs
+iOS 26. On iOS 18 the app looks the way it did in the simulator screenshots.
 
 ---
 
-## 0. Xcode 26 or later
-
-Since **28 April 2026**, App Store Connect refuses uploads built with anything
-older than Xcode 26 and the iOS 26 SDK, TestFlight included. This app was last
-built locally for the iOS 18.5 simulator, the newest one Xcode 16.4 ships, so
-check which Xcode that Mac has before archiving.
-
-1. `xcodebuild -version` must print **Xcode 26** or later.
-2. If not, update Xcode. Any 26.x release is accepted: Xcode 26.0 to 26.3 run on
-   macOS Sequoia 15.6 or later, and Xcode 26.4.1 onwards needs macOS Tahoe 26.2.
-   Older releases are at <https://developer.apple.com/download/all/>.
-
-GitHub Actions already builds every push with Xcode 26
-(`.github/workflows/ci.yml`), so a green run there means the code itself is
-ready; this step is only about the Mac you archive from.
-
 ## 1. Apple Developer Program — $99/year
 
-Required, and not optional here: **both** CloudKit and TestFlight need the paid
-program. A free Apple ID cannot provision an iCloud container.
+Strictly optional for a personal app, but worth it here:
 
-1. Enrol at <https://developer.apple.com/programs/enroll/> (Apple ID + 2FA).
-   Individual enrolment is usually instant, occasionally 24–48 h.
-2. In Xcode: **Settings → Accounts → +** and sign in with that Apple ID.
-3. Open `Flaunedex.xcodeproj` → target **Flaunedex** → **Signing & Capabilities**
-   → tick *Automatically manage signing* and pick your Team.
+| | Free Apple ID | Paid program |
+|---|---|---|
+| An install from Xcode lasts | **7 days**, then the app won't open until you reinstall | **1 year** |
+| iCloud backup of your collection and recipes | No (the iPhone's own backup still includes it) | Yes |
 
-After this, `security find-identity -v -p codesigning` should list an
-*Apple Development* identity.
+The 7-day limit is the real cost for a field app: on a two-week trip it stops
+opening halfway through. The data stays safe, but locked until you are back at
+the Mac.
 
-> The project sets `DEVELOPMENT_TEAM: ""` in `project.yml`. Once you know your
-> 10-character Team ID you can paste it there so `xcodegen generate` keeps the
-> setting; otherwise just re-pick the team in Xcode after regenerating.
+**Enrol on the web**, not in the Apple Developer app (which needs iOS 26):
+<https://developer.apple.com/account> → sign in → **Enroll** → continue on the
+web. Pay with a card in your own name, otherwise Apple asks for a copy of your
+ID and approval takes longer.
 
-## 2. Create the iCloud container
+## 2. Xcode
 
-The entitlements file already asks for `iCloud.com.taddeocarpinelli.flaunedex`.
+1. `xcodebuild -version`. Any Xcode that supports iOS 18 devices works: Xcode 16
+   or 26. (The "Xcode 26 only" rule applies to App Store Connect uploads, which
+   this route never makes.)
+2. **Xcode → Settings → Accounts → +** and sign in with the Apple ID you enrolled.
+3. In the repository: `xcodegen generate && open Flaunedex.xcodeproj`.
+4. Target **Flaunedex** → **Signing & Capabilities** → tick *Automatically manage
+   signing* and pick your Team. Leave **iCloud** (CloudKit, container
+   `iCloud.com.taddeocarpinelli.flaunedex`), **Push Notifications** and
+   **Background Modes → Remote notifications** on when they appear: they come from
+   the entitlements and `Info.plist`, and are how iCloud keeps the data backed up.
 
-1. **Signing & Capabilities → + Capability → iCloud**, tick **CloudKit**.
-2. In the containers list, tick (or create) `iCloud.com.taddeocarpinelli.flaunedex`.
-3. Leave **Push Notifications** and **Background Modes → Remote notifications** on
-   when they appear. They come from the entitlements and `Info.plist`, and are how
-   CloudKit tells the app about changes made on another device.
+> `project.yml` sets `DEVELOPMENT_TEAM: ""`. Paste your 10-character Team ID
+> there once you know it, so `xcodegen generate` keeps the setting.
 
-## 3. Populate the Development schema
+> **Staying on the free Apple ID instead?** Free accounts cannot sign iCloud or
+> push. Remove the three iCloud keys and `aps-environment` from
+> `App/Flaunedex.entitlements` (or ask for a switch in `project.yml`); the app
+> then runs local-only and says so in Réglages.
 
-CloudKit builds its schema from what the app actually saves — it starts empty.
+## 3. Install on the iPhone
 
-1. Sign the **simulator or device** into an iCloud account
-   (Réglages → *Se connecter à l'iPhone*).
-2. Run the app from Xcode.
-3. In **Réglages** inside the app, confirm it now reads **"Sauvegarde iCloud
-   active"**. If it says *"iCloud non connecté"*, the device isn't signed in and
-   nothing will sync.
-4. Capture at least one sighting **and save at least one recipe** (or run with
-   `-seedSampleData`, which creates both) so that all three record types get
-   created: `CD_Species`, `CD_Sighting` and `CD_Recipe`.
+1. Plug the iPhone into the Mac, unlock it, and tap **Trust**.
+2. On the iPhone: **Réglages → Confidentialité et sécurité → Mode développeur** →
+   on, then restart when asked. (The switch appears once Xcode has seen the phone.)
+3. In Xcode, pick the iPhone as the run destination and press **Run** (⌘R).
+4. The first launch may say the developer is not trusted: **Réglages → Général →
+   VPN et gestion de l'appareil** → your Apple ID → **Faire confiance**.
 
-Do this on the **iPhone**, with your Gemini key pasted into Réglages, and make
-the sighting a real scan and the recipe a real request. The camera only works on
-a device, and these are the first two Gemini calls the app will ever make
-against the real API: everything around them is tested, the calls themselves
-are not. If a scan fails, that is the place to look before uploading anything.
+## 4. First real use
 
-## 4. Deploy the schema to Production ⚠️
+These are the first calls the app will ever make for real, so do them before
+relying on it in the field:
 
-**This is the step that silently breaks TestFlight if skipped.** TestFlight and
-App Store builds talk to the **Production** CloudKit environment; a schema that
-only exists in Development simply isn't there for them.
+1. **Réglages** in the app → paste your Gemini key.
+2. Check the **Sauvegarde** row reads *Sauvegarde iCloud active*. *iCloud non
+   connecté* means the iPhone isn't signed in to iCloud; the app still works, it
+   just isn't backed up.
+3. **Capturer**: photograph a plant or an animal. This is the first identification
+   ever sent to Gemini.
+4. **Cuisine → Demander**: ask for one recipe. This is the first recipe request.
 
-1. Open <https://icloud.developer.apple.com/dashboard/>.
-2. Select the container `iCloud.com.taddeocarpinelli.flaunedex`.
-3. **Schema → Indexes / Record Types** — check `CD_Species`, `CD_Sighting` and
-   `CD_Recipe` are listed under *Development*.
-4. Click **Deploy Schema Changes…** → review → **Deploy to Production**.
+If a scan or a recipe fails, that is the thing to look at first.
 
-Re-do this **any time the SwiftData models change** (new field, new entity).
+## Keep it alive
 
-## 5. TestFlight
+- **Once a year**, reinstall from Xcode (step 3) before the year runs out, and
+  keep the $99 membership current. Set a reminder.
+- iCloud data lives in CloudKit's **Development** environment, which is what
+  installs from Xcode use. That is fine for a personal app; the Production deploy
+  only matters for TestFlight or the App Store.
 
-Internal testing needs **no App Review**.
+---
 
-1. Create the app record in App Store Connect (same bundle id).
-2. Xcode → **Product → Archive** → **Distribute App → App Store Connect →
-   Upload**.
-3. In App Store Connect → **TestFlight** → add yourself to **Internal Testers**.
-4. Install TestFlight on the iPhone, signed in with the same Apple ID.
+## Later: TestFlight (optional)
 
-Processing takes minutes to about an hour.
+Only worth it to install without a cable, or to share the app with someone.
 
-### Keep it alive
+- Needs **Xcode 26 or later**: since 28 April 2026, App Store Connect refuses
+  uploads built with older SDKs. Xcode 26.0 to 26.3 run on macOS Sequoia 15.6;
+  26.4.1 onwards needs macOS Tahoe 26.2.
+- Before the first upload, **deploy the CloudKit schema to Production**
+  (<https://icloud.developer.apple.com/dashboard/> → container → *Deploy Schema
+  Changes*, after `CD_Species`, `CD_Sighting` and `CD_Recipe` exist in
+  Development). TestFlight builds talk to Production; skipping this silently
+  breaks sync.
+- Create the app in App Store Connect, then **Product → Archive → Distribute App →
+  App Store Connect → Upload**, and add yourself as an internal tester.
+- TestFlight builds expire after 90 days.
 
-- **TestFlight builds expire 90 days after upload.** Re-upload (bumping
-  `CURRENT_PROJECT_VERSION`) about every 80 days. Set a reminder.
-- The $99 membership renews annually; if it lapses, distribution stops.
-
-`ITSAppUsesNonExemptEncryption` is already set to `false` in `App/Info.plist`, so
-you won't be blocked by the export-compliance question.
+`ITSAppUsesNonExemptEncryption` is already `false` in `App/Info.plist`, and the
+privacy manifest and opaque icon upload validation checks for are in place.
 
 ---
 
@@ -115,13 +109,11 @@ you won't be blocked by the export-compliance question.
 
 | Check | Where |
 |---|---|
-| Xcode new enough to upload | `xcodebuild -version` → 26 or later |
-| Code builds with Xcode 26 | GitHub → **Actions** → latest *CI* run is green |
+| Code builds | GitHub → **Actions** → latest *CI* run is green |
 | Signing identity exists | `security find-identity -v -p codesigning` |
 | iCloud actually syncing | app → **Réglages** → *Sauvegarde* row |
-| Schema deployed | CloudKit Console → Schema → **Production** tab |
-| Build not expired | App Store Connect → TestFlight |
+| Install not expired | app opens; reinstall from Xcode yearly |
 
 If the app ever shows **"iCloud non connecté"** or **"Stockage local
-uniquement"**, it is still fully usable — sightings are saved on the device and
-simply aren't backed up. The app no longer crashes when CloudKit is unavailable.
+uniquement"**, it is still fully usable — everything is saved on the device and
+simply isn't backed up.
