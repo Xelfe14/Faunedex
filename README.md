@@ -12,6 +12,11 @@ ingredients, and step-by-step instructions, with every amount in grams, millilit
 Celsius. Then make it yours: add your own notes, delete what you do not want, rescale it for a
 different table, or rewrite the whole thing as free text.
 
+**Saisons**, inside Cuisine, is the year as a fresque: every fruit and vegetable ADEME tracks, twelve
+months across, coloured by where it comes from each month seen from Paris (France, Southern Europe,
+or far away). Every recipe shows its carbon footprint, flags the ingredients that are out of season,
+and can ask Gemini for a lower-impact version. Asking for a recipe cooks with the season by default.
+
 Native SwiftUI · SwiftData + iCloud · offline-first · French throughout.
 
 ---
@@ -26,10 +31,12 @@ Flaunedex/
 │  │   ├─ Gemini/             recipe engine: units, schema, free-text round trip).
 │  │   ├─ GBIF/               Unit-tested on macOS.
 │  │   ├─ Enrichment/
-│  │   ├─ Cuisine/            Recipe units, prompt + schema, text format, dish photos
+│  │   ├─ Cuisine/            Recipe units, prompt + schema, text format, dish photos,
+│  │   │   ├─ Saisons/          the seasonal calendar (generated from ADEME data)
+│  │   │   └─ Impact/           ingredient matching and recipe carbon footprints
 │  │   ├─ Media/              EXIF GPS tagging, and the GPS-free copy sent to Gemini
 │  │   └─ Networking/
-│  └─ Tests/FlaunedexCoreTests/  199 tests, run with `swift test` (no Xcode needed)
+│  └─ Tests/FlaunedexCoreTests/  227 tests, run with `swift test` (no Xcode needed)
 ├─ App/                      The iOS app (SwiftUI, SwiftData, AVFoundation, MapKit, CloudKit)
 │  ├─ FlaunedexApp.swift
 │  ├─ Persistence/           SwiftData models (Species, Sighting, Recipe)
@@ -37,6 +44,7 @@ Flaunedex/
 │  └─ Features/              The screens, with Features/Cuisine/ for the recipe side
 ├─ project.yml               XcodeGen project definition
 ├─ App/Info.plist, App/Flaunedex.entitlements, App/PrivacyInfo.xcprivacy
+├─ Tools/food-data/          Regenerates the seasonal and footprint tables from ADEME's datasets
 ├─ .github/workflows/ci.yml  Core tests + app builds on Xcode 26, on every push
 └─ README.md
 ```
@@ -49,11 +57,13 @@ and **tests on macOS without Xcode**. The Apple-framework code lives in `App/`, 
 
 ## Prerequisites
 
-- **A Mac with full Xcode 26 or later** — not just the Command Line Tools. Needed to build the iOS
-  app, and App Store Connect has refused uploads built with older Xcode versions since April 2026.
+- **A Mac with full Xcode** — not just the Command Line Tools. Any version that supports your
+  iPhone's iOS works for installing from Xcode; only App Store Connect uploads (TestFlight) need
+  Xcode 26 or later.
 - **XcodeGen** to generate the `.xcodeproj`: `brew install xcodegen`
-- **A paid Apple Developer account** ($99/yr) — required because the app uses **CloudKit** (and for
-  TestFlight). Enroll at <https://developer.apple.com/programs>.
+- **A paid Apple Developer account** ($99/yr) — for iCloud backup and year-long installs (a free
+  Apple ID works too, with 7-day installs and no iCloud). Enrol on the web at
+  <https://developer.apple.com/account>.
 - **A Google Gemini API key** (required) from <https://aistudio.google.com/app/apikey>.
   Optional: an **IUCN Red List v4** token (<https://api.iucnredlist.org>) and a **Xeno-canto** key
   (<https://xeno-canto.org>) for richer conservation badges and bird songs. All keys are pasted into
@@ -86,7 +96,7 @@ xcrun simctl launch booted com.taddeocarpinelli.flaunedex -seedSampleData
 That seeds four species and three recipes, all with live Wikimedia images.
 
 Add `-previewSpeciesDetail` or `-previewRecipeDetail` to open a card directly, or
-`-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages|recettes|demander>`
+`-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages|recettes|demander|saisons>`
 to jump to any screen. Set these under **Product → Scheme → Edit Scheme → Arguments** to
 use them from Xcode. They are compiled out of Release builds.
 
@@ -105,20 +115,12 @@ In Xcode:
 
 ---
 
-## Putting it on your iPhone (TestFlight)
+## Putting it on your iPhone
 
-1. In App Store Connect, create the app record (matching the bundle id).
-2. **Deploy the CloudKit schema to Production first** (CloudKit Dashboard → your container →
-   *Deploy Schema Changes*). TestFlight/Release builds hit the **Production** environment; skipping
-   this makes sync silently fail.
-3. In Xcode: **Product → Archive → Distribute App → App Store Connect → Upload**.
-4. In App Store Connect → TestFlight, add yourself to **Internal Testers** (no App Review needed).
-   Install the **TestFlight** app on your iPhone with the same Apple ID.
-5. **Rebuild roughly every 80 days** — TestFlight builds expire at 90 (bump `CURRENT_PROJECT_VERSION`
-   in `project.yml` each time). Set a calendar reminder.
-
-`ITSAppUsesNonExemptEncryption` is already set to `NO` in `Info.plist`, so the build is testable
-immediately.
+The app is for one person on one phone (an iPhone XS on iOS 18), so it is installed straight from
+Xcode: plug the phone in, turn on Developer Mode, press Run. With the paid account an install lasts a
+year and iCloud backs the data up. Step by step, including the first real scan and recipe request,
+in [DEPLOYMENT.md](DEPLOYMENT.md). TestFlight is described there too, as an option.
 
 ---
 
@@ -165,10 +167,34 @@ never scaled, because doubling a batch does not double its baking time.
 
 ---
 
+## Seasons and carbon footprint
+
+1. **The calendar is ADEME's.** Impact CO2's 76 fruits and vegetables give the months each is
+   harvested in France and its footprint in kg CO₂e per kg (Agribalyse 3.2). On top of that, curated
+   by hand and shown as indicative: when Spain, Italy, Portugal or Greece supply each item, which items
+   only reach Paris from far away, and where they come from. Each month of each item is French,
+   Southern European, a far import, or out of season, in that order of preference.
+2. **A recipe's footprint is computed from its ingredient list.** Each line is matched to a known food
+   by whole words, longest name first, so "pommes de terre" is a potato and "lait de coco" is not milk.
+   Fresh produce uses the calendar's figure; everything else (meat, dairy, pasta, oil, condiments) uses
+   Agribalyse 3.2, 154 foods in all. Amounts are already metric; counted things use a typical piece
+   weight. What has no data, or no knowable weight, is listed as not evaluated rather than guessed.
+3. **It is put into perspective** against ADEME's reference meals (vegan 0.54, vegetarian 0.85,
+   chicken 1.46, beef 4.97 kg CO₂e per meal) and a petrol car's kilometre (0.142 kg).
+4. **Gemini cooks with the season**: a recipe request carries this month's French and Southern
+   European produce, and the "lower-impact version" request names the heaviest ingredients so the
+   model knows what to replace. That version is saved as a new recipe, beside the original.
+
+The tables are generated by `python3 Tools/food-data/build_food_data.py` from the live datasets; it
+fails if a curated entry points at something the datasets no longer contain.
+
+---
+
 ## Data credits & safety
 
 Data from **GBIF** (CC BY), **Wikidata** (CC0), **Wikimedia Commons** (per-image CC/PD — attribution
-shown on each card), **IUCN Red List** (non-commercial), and **Xeno-canto** (per-recording CC).
+shown on each card), **IUCN Red List** (non-commercial), **Xeno-canto** (per-recording CC), and
+**ADEME** — Impact CO2 and Agribalyse 3.2 — for seasons and carbon footprints (Licence Ouverte 2.0).
 Identification is by Google Gemini and **can be wrong** — the app never gives edibility advice, and
 toxicity notes always carry a caution. Contributing your sightings to iNaturalist (which feeds GBIF)
 is planned for a future version.
@@ -177,8 +203,9 @@ is planned for a future version.
 
 ## Status
 
-- ✅ `FlaunedexCore` — **199 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
+- ✅ `FlaunedexCore` — **227 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
   round-trip, the GPS-free upload copy, the natural-range unlock rules, the recipe text round trip,
+  the season statuses and ingredient footprints,
   and both pipelines driven end to end over a scripted transport (so the wiring, the error statuses
   and the graceful degradations are exercised without an API key).
 - ✅ Builds with **Xcode 26** (the iOS 26 SDK App Store Connect requires) on every push, in GitHub
@@ -196,13 +223,17 @@ is planned for a future version.
 - ✅ Cuisine: recipe bank with search, your own tags, favourites and hand ordering; ask Gemini for a
   dish or a variation of one you have; real dish photographs with attribution; per-recipe notes;
   swipe-delete and drag-reorder of ingredients and steps; rescaling; and full free-text editing.
+- ✅ Saisons: the seasonal fresque with month, shelf and name filters; a card per fruit and vegetable
+  with its season, footprint and the recipes that use it; season pictograms and a carbon footprint on
+  every recipe; seasonal cooking by default; and lower-impact versions. Compiles in CI; **not yet seen
+  running** — the screens were built after the last simulator session.
 - ✅ Verified live: Wikipedia/Commons image lookup, GBIF nearby suggestions, and batched Wikidata
   French-name resolution all exercised against the real APIs from the running app.
 - ⏳ Not yet done: run on a **real iPhone** (the camera and CoreLocation can't be exercised in the
   simulator), a first **real Gemini call** (identification and recipes are tested up to the wire,
-  never against the live API), and the account-holder steps in [DEPLOYMENT.md](DEPLOYMENT.md) —
-  Xcode 26 on the Mac, Apple Developer enrolment, the iCloud container, **deploying the CloudKit
-  schema to Production**, and TestFlight. iNaturalist sharing remains the planned v2.
+  never against the live API), a first look at the Saisons screens, and the account-holder steps in
+  [DEPLOYMENT.md](DEPLOYMENT.md) — Apple Developer enrolment, signing, Developer Mode and the install
+  from Xcode. iNaturalist sharing remains the planned v2.
 
 ### Known limitations
 
@@ -210,6 +241,9 @@ is planned for a future version.
   but it can only be exercised on a physical device.
 - SwiftUI's `Map` has no built-in clustering; `SightingsMapView` is isolated so an `MKMapView`
   wrapper can replace it if pin counts grow.
-- CloudKit sync needs the paid account and a Production schema deploy before TestFlight — see
-  [DEPLOYMENT.md](DEPLOYMENT.md). Until then the app runs local-only and says so in Réglages
+- CloudKit sync needs the paid account (and, only for TestFlight, a Production schema deploy) — see
+  [DEPLOYMENT.md](DEPLOYMENT.md). Without it the app runs local-only and says so in Réglages
   rather than failing.
+- Southern Europe months are curated by hand and indicative; only the French calendar is ADEME's.
+  Agribalyse has no figure for some common ingredients (champignons de Paris, câpres), which recipes
+  list as not evaluated. Home cooking energy is not counted.

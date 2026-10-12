@@ -79,3 +79,43 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO
+
+      # Launch the Debug build on the sample data and photograph a few screens,
+      # so a change to the UI can be looked at without a Mac. Never fails the
+      # build: a slow simulator is not a code problem.
+      - name: Screenshots
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          runtimes = json.load(sys.stdin)["devices"]
+          ios = sorted((r for r in runtimes if "iOS" in r), reverse=True)
+          phones = [d for r in ios for d in runtimes[r] if d["name"].startswith("iPhone")]
+          print(next((d["udid"] for d in phones if d["name"] in ("iPhone 17", "iPhone 16")), phones[0]["udid"]))')
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/Build/Products/Debug-iphonesimulator/Flaunedex.app
+          mkdir -p screenshots
+          shoot() {
+            name=$1; shift
+            xcrun simctl terminate "$UDID" com.taddeocarpinelli.flaunedex 2>/dev/null || true
+            xcrun simctl launch "$UDID" com.taddeocarpinelli.flaunedex -seedSampleData "$@"
+            sleep 7
+            xcrun simctl io "$UDID" screenshot "screenshots/$name.png"
+          }
+          shoot 1-saisons -previewScreen saisons
+          shoot 2-produit -previewScreen produit
+          shoot 3-impact -previewScreen impact
+          shoot 4-recette -previewRecipeDetail
+          shoot 5-demander -previewScreen demander
+
+      - name: Keep the screenshots
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots
+          if-no-files-found: ignore
+          retention-days: 14

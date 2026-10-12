@@ -49,7 +49,7 @@ struct RootTabView: View {
 
     #if DEBUG
     /// Debug-only preview routing so any screen can be inspected directly:
-    /// `-previewSpeciesDetail`, or `-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages|recettes|demander|saisons>`.
+    /// `-previewSpeciesDetail`, or `-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages|recettes|demander|saisons|produit|impact>`.
     @Query(sort: \Species.dexNumber) private var previewSpecies: [Species]
     @Query(sort: \Recipe.sortIndex) private var previewRecipes: [Recipe]
 
@@ -122,6 +122,26 @@ struct RootTabView: View {
         case "recettes", "cuisine": CuisineTabs(section: section)
         case "demander": NavigationStack { RecipeAskView() }
         case "saisons": NavigationStack { SeasonsView() }
+        case "produit":
+            if let tomato = ProduceCatalog.produce(id: "tomate") {
+                NavigationStack { ProduceDetailView(produce: tomato) }
+            }
+        case "impact":
+            // The footprint section alone, on the sample recipe with the most
+            // to say: a heavy meat, and an ingredient with no data.
+            if let recipe = previewRecipes.first(where: { $0.title.contains("Blanquette") }) ?? previewRecipes.first {
+                NavigationStack {
+                    List {
+                        RecipeImpactSection(
+                            footprint: RecipeFootprint(ingredients: recipe.ingredients),
+                            servings: recipe.servings, canAskLighter: true, isWorking: false,
+                            askLighter: {}
+                        )
+                    }
+                    .navigationTitle(recipe.title)
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+            }
         default: DexView(realm: .animal)
         }
     }
