@@ -141,6 +141,9 @@ public enum RecipeSchema {
         if let maxMinutes = request.maxMinutes {
             lines.append("Le temps total (préparation + cuisson) ne doit pas dépasser \(maxMinutes) minutes.")
         }
+        if let month = request.seasonalMonth {
+            lines.append(seasonalInstruction(month: month))
+        }
         return lines.joined(separator: " ")
     }
 
@@ -167,11 +170,16 @@ public struct RecipeRequest: Sendable, Equatable {
     public var constraints: String?
     /// A ceiling on total time, when the cook is in a hurry.
     public var maxMinutes: Int?
+    /// Cook with what is in season this month (1...12), or nil to leave the
+    /// model free.
+    public var seasonalMonth: Int?
 
-    public init(query: String, servings: Int = 4, constraints: String? = nil, maxMinutes: Int? = nil) {
+    public init(query: String, servings: Int = 4, constraints: String? = nil, maxMinutes: Int? = nil,
+                seasonalMonth: Int? = nil) {
         self.query = query
         self.servings = max(1, servings)
         self.constraints = constraints
         self.maxMinutes = maxMinutes
+        self.seasonalMonth = seasonalMonth
     }
 }
