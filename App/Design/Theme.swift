@@ -32,6 +32,38 @@ enum Theme {
     static let cuisine = Color(light: .init(r: 0.72, g: 0.28, b: 0.18),
                                dark:  .init(r: 0.93, g: 0.52, b: 0.40))
 
+    /// Calendar fill for a month: solid green for the French season, the same
+    /// green washed out for Southern Europe, grey for far imports, and almost
+    /// nothing when it is out of season. One source, so the bars, the legend
+    /// and the detail screen can't disagree.
+    static func seasonFill(_ status: SeasonStatus) -> Color {
+        switch status {
+        case .france: return flora
+        case .europe: return flora.opacity(0.38)
+        case .farImport: return Color.gray.opacity(0.45)
+        case .outOfSeason: return Color.primary.opacity(0.06)
+        }
+    }
+
+    /// Icon colour for a season badge, readable on a white row.
+    static func seasonInk(_ status: SeasonStatus) -> Color {
+        switch status {
+        case .france: return flora
+        case .europe: return treasure
+        case .farImport: return Color.gray
+        case .outOfSeason: return Color.orange
+        }
+    }
+
+    /// Colour for a carbon footprint: green, amber, paprika.
+    static func impact(_ level: ImpactLevel) -> Color {
+        switch level {
+        case .low: return flora
+        case .medium: return treasure
+        case .high: return cuisine
+        }
+    }
+
     /// The accent for a realm.
     static func accent(for realm: Realm) -> Color {
         switch realm {

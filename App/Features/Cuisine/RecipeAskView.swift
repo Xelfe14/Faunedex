@@ -11,8 +11,11 @@ struct RecipeAskView: View {
     @Environment(RecipeStore.self) private var store
     @Environment(APIKeys.self) private var keys
 
-    @State private var query = ""
+    @State private var query: String
     @State private var servings = 4
+    /// Remembered across launches: cooking with the season is the default,
+    /// and a cook who turns it off for a while shouldn't have to keep doing so.
+    @AppStorage("cookSeasonal") private var cookSeasonal = true
     @State private var constraints = ""
     @State private var maxMinutes: Int?
     @State private var created: Recipe?
@@ -29,6 +32,12 @@ struct RecipeAskView: View {
         "une soupe d'automne au potiron",
         "un plat végétarien avec ce qui traîne au frigo",
     ]
+
+    /// `initialQuery` pre-fills the request, as when the seasonal calendar
+    /// asks for "une recette avec poireau".
+    init(initialQuery: String = "") {
+        _query = State(initialValue: initialQuery)
+    }
 
     private var canAsk: Bool {
         keys.hasGeminiKey && !query.trimmingCharacters(in: .whitespaces).isEmpty && !store.isWorking
@@ -80,6 +89,16 @@ struct RecipeAskView: View {
                 } onDecrement: {
                     servings = max(1, servings - 1)
                 }
+            }
+
+            Section {
+                Toggle(isOn: $cookSeasonal) {
+                    Label("Cuisiner de saison", systemImage: "leaf")
+                }
+            } footer: {
+                Text(cookSeasonal
+                     ? "Le chef part des fruits et légumes de \(SeasonCalendar.monthName(SeasonCalendar.currentMonth())) en France, puis d'Europe du Sud, et évite ceux qui viennent de loin."
+                     : "Le chef choisit ses ingrédients librement.")
             }
 
             Section {
@@ -146,7 +165,8 @@ struct RecipeAskView: View {
             servings: servings,
             constraints: constraints.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 ? nil : constraints,
-            maxMinutes: maxMinutes
+            maxMinutes: maxMinutes,
+            seasonalMonth: cookSeasonal ? SeasonCalendar.currentMonth() : nil
         )
         Task {
             do {

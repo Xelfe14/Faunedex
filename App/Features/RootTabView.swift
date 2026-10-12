@@ -49,7 +49,7 @@ struct RootTabView: View {
 
     #if DEBUG
     /// Debug-only preview routing so any screen can be inspected directly:
-    /// `-previewSpeciesDetail`, or `-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages|recettes>`.
+    /// `-previewSpeciesDetail`, or `-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages|recettes|demander|saisons>`.
     @Query(sort: \Species.dexNumber) private var previewSpecies: [Species]
     @Query(sort: \Recipe.sortIndex) private var previewRecipes: [Recipe]
 
@@ -121,6 +121,7 @@ struct RootTabView: View {
         case "reglages": NavigationStack { SettingsView() }
         case "recettes", "cuisine": CuisineTabs(section: section)
         case "demander": NavigationStack { RecipeAskView() }
+        case "saisons": NavigationStack { SeasonsView() }
         default: DexView(realm: .animal)
         }
     }
@@ -210,6 +211,8 @@ private struct CuisineTabs: View {
                 .tabItem { Label("Recettes", systemImage: "book.pages.fill") }
             NavigationStack { RecipeAskView() }
                 .tabItem { Label("Demander", systemImage: "sparkles") }
+            NavigationStack { SeasonsView() }
+                .tabItem { Label("Saisons", systemImage: "calendar") }
             CuisineMoreView(section: $section)
                 .tabItem { Label("Plus", systemImage: "ellipsis.circle.fill") }
         }

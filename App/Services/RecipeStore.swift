@@ -106,6 +106,50 @@ final class RecipeStore {
         }
     }
 
+    /// Ask for a version of a recipe that is lighter on the climate, kept as a
+    /// new recipe so the two can be compared, and the original is never lost.
+    ///
+    /// The request names the ingredients that weigh the most, so the model
+    /// knows where to act, and carries this month's season so a replacement
+    /// is something actually at the market.
+    func lowerImpactVersion(of recipe: Recipe) async throws -> Recipe {
+        guard keys.hasGeminiKey else { throw RecipeError.noKey }
+        isWorking = true
+        lastError = nil
+        defer { isWorking = false }
+
+        let footprint = RecipeFootprint(ingredients: recipe.ingredients)
+        let change = RecipeSchema.lowerImpactChange(footprint: footprint, servings: recipe.servings)
+        let request = RecipeRequest(query: recipe.title, servings: recipe.servings,
+                                    seasonalMonth: SeasonCalendar.currentMonth())
+        let draft: RecipeDraft
+        do {
+            draft = try await generator.generate(
+                request: request,
+                apiKey: keys.geminiKey,
+                revision: .init(existingText: RecipeTextFormat.render(recipe.draft), change: change),
+                thinkingLevel: .high
+            )
+        } catch {
+            let message = Self.frenchMessage(for: error)
+            lastError = message
+            throw RecipeError.network(message)
+        }
+
+        let title = draft.title == recipe.title ? "\(draft.title) (bas carbone)" : draft.title
+        let lighter = Recipe(title: title, source: .gemini)
+        lighter.apply(draft)
+        lighter.title = title
+        lighter.tags = RecipeDraft.uniqueTrimmed(lighter.tags + ["bas carbone"])
+        lighter.originalPrompt = "Version moins émettrice de « \(recipe.title) »"
+        lighter.sortIndex = nextSortIndex()
+        context.insert(lighter)
+        save()
+
+        await attachPhoto(to: lighter, query: draft.photoQuery ?? draft.title)
+        return lighter
+    }
+
     // MARK: The cook's own edits
 
     /// Replace a recipe's whole content with text the cook wrote.

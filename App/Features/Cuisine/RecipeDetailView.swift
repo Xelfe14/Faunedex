@@ -28,6 +28,14 @@ struct RecipeDetailView: View {
     @State private var showingTags = false
     @State private var confirmingDelete = false
     @State private var errorMessage: String?
+    /// The lower-impact version, once the model has written it.
+    @State private var lighterVersion: Recipe?
+
+    private let month = SeasonCalendar.currentMonth()
+
+    private var footprint: RecipeFootprint {
+        RecipeFootprint(ingredients: recipe.ingredients)
+    }
 
     private var tagSuggestions: [String] {
         RecipeDraft.uniqueTrimmed(allRecipes.flatMap(\.tags))
@@ -38,6 +46,16 @@ struct RecipeDetailView: View {
             heroSection
             headerSection
             if !recipe.ingredients.isEmpty || recipe.source == .manual { ingredientsSection }
+            let footprint = self.footprint
+            if footprint.hasData {
+                RecipeImpactSection(
+                    footprint: footprint,
+                    servings: recipe.servings,
+                    canAskLighter: store.hasGeminiKey,
+                    isWorking: store.isWorking,
+                    askLighter: askLighter
+                )
+            }
             if !recipe.steps.isEmpty || recipe.source == .manual { stepsSection }
             if let tip = recipe.chefTipFR, !tip.isEmpty { tipSection(tip) }
             if !recipe.allergens.isEmpty { allergensSection }
@@ -58,6 +76,9 @@ struct RecipeDetailView: View {
         }
         .sheet(isPresented: $showingVariation) {
             RecipeVariationSheet(recipe: recipe)
+        }
+        .navigationDestination(item: $lighterVersion) { lighter in
+            RecipeDetailView(recipe: lighter)
         }
         .sheet(isPresented: $showingTags) {
             NavigationStack {
@@ -164,8 +185,14 @@ struct RecipeDetailView: View {
                 }
             }
             ForEach(recipe.ingredients) { ingredient in
-                Text(ingredient.displayLine)
-                    .font(.subheadline)
+                HStack(spacing: 8) {
+                    Text(ingredient.displayLine)
+                        .font(.subheadline)
+                    Spacer(minLength: 0)
+                    if let produce = FoodCatalog.match(ingredient.name)?.produce {
+                        SeasonBadge(status: produce.status(in: month))
+                    }
+                }
             }
             .onDelete { store.removeIngredient(at: $0, from: recipe) }
             .onMove { store.moveIngredient(from: $0, to: $1, in: recipe) }
@@ -176,7 +203,7 @@ struct RecipeDetailView: View {
                 servingsControl
             }
         } footer: {
-            Text("Balayez un ingrédient pour le supprimer. Changez le nombre de personnes pour recalculer toutes les quantités.")
+            Text("Saison de \(SeasonCalendar.monthName(month)) : feuille, en France ; soleil, en Europe du Sud ; avion, importé de loin ; calendrier, hors saison. Balayez un ingrédient pour le supprimer, et changez le nombre de personnes pour recalculer les quantités.")
         }
     }
 
@@ -399,6 +426,17 @@ struct RecipeDetailView: View {
     private func commitNotes() {
         guard noteDraft != (recipe.notes ?? "") else { return }
         store.setNotes(noteDraft, on: recipe)
+    }
+
+    private func askLighter() {
+        Task {
+            do {
+                lighterVersion = try await store.lowerImpactVersion(of: recipe)
+            } catch {
+                errorMessage = (error as? LocalizedError)?.errorDescription
+                    ?? RecipeStore.frenchMessage(for: error)
+            }
+        }
     }
 }
 
