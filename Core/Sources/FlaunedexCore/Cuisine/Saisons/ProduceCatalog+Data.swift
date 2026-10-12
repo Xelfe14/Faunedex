@@ -171,17 +171,6 @@ extension ProduceCatalog {
             kgCO2ePerKg: 1.7445
         ),
         Produce(
-            id: "champignonmorille", name: "Champignon (morille crue)",
-            category: .vegetable,
-            franceMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            europeMonths: [],
-            availableMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            farImport: false,
-            origins: nil,
-            note: nil,
-            kgCO2ePerKg: 6.175
-        ),
-        Produce(
             id: "chou", name: "Chou",
             category: .vegetable,
             franceMonths: [1, 2, 3, 10, 11, 12],
@@ -468,7 +457,7 @@ extension ProduceCatalog {
             kgCO2ePerKg: 0.4684
         ),
         Produce(
-            id: "mangue", name: "Mangue (importée par avion)",
+            id: "mangue", name: "Mangue (avion)",
             category: .fruit,
             franceMonths: [],
             europeMonths: [],
@@ -479,7 +468,7 @@ extension ProduceCatalog {
             kgCO2ePerKg: 11.6555
         ),
         Produce(
-            id: "manguebateau", name: "Mangue (importée par bateau)",
+            id: "manguebateau", name: "Mangue (bateau)",
             category: .fruit,
             franceMonths: [],
             europeMonths: [8, 9, 10, 11],
@@ -510,6 +499,17 @@ extension ProduceCatalog {
             origins: "Espagne",
             note: nil,
             kgCO2ePerKg: 0.9783
+        ),
+        Produce(
+            id: "champignonmorille", name: "Morille",
+            category: .vegetable,
+            franceMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            europeMonths: [],
+            availableMonths: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            farImport: false,
+            origins: nil,
+            note: nil,
+            kgCO2ePerKg: 6.175
         ),
         Produce(
             id: "myrtille", name: "Myrtille",

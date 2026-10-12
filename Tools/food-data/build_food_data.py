@@ -55,6 +55,8 @@ ALL_YEAR = list(range(1, 13))
 # aliases: words that name the item in a recipe, singular, lower case. The
 #         longest match wins, so "pomme" never swallows "pomme de terre".
 # piece:  grams in one counted unit ("2 courgettes"), for recipe footprints.
+# label:  the name shown, where ADEME's would mislead: its "Champignon (morille
+#         crue)" is a morel, and must not read as mushrooms in general.
 # ---------------------------------------------------------------------------
 PRODUCE = {
     # Fruits
@@ -84,9 +86,9 @@ PRODUCE = {
     "kaki": dict(europe=[10, 11, 12, 1], origins="Espagne", aliases=["kaki", "plaquemine"], piece=200),
     "kiwi": dict(europe=[10, 11, 12, 1, 2, 3, 4, 5], origins="Italie, Grèce, Portugal", aliases=["kiwi"], piece=80),
     "mandarine": dict(europe=[10, 11, 12, 1, 2, 3], origins="Espagne", aliases=["mandarine"], piece=70),
-    "mangue": dict(far=True, france=[], aliases=["mangue importee par avion", "mangue par avion"], piece=400,
+    "mangue": dict(label="Mangue (avion)", far=True, france=[], aliases=["mangue importee par avion", "mangue par avion"], piece=400,
                         note="Le fret aérien multiplie son empreinte par seize."),
-    "manguebateau": dict(far=True, france=[], europe=[8, 9, 10, 11], origins="Espagne (Málaga)",
+    "manguebateau": dict(label="Mangue (bateau)", far=True, france=[], europe=[8, 9, 10, 11], origins="Espagne (Málaga)",
                          aliases=["mangue"], piece=400,
                          note="Le reste de l'année, importée de loin par bateau."),
     "melon": dict(europe=[5, 6, 7, 8, 9, 10], origins="Espagne", aliases=["melon"], piece=1000),
@@ -129,7 +131,7 @@ PRODUCE = {
     "brocoli": dict(europe=[10, 11, 12, 1, 2, 3, 4], origins="Espagne (Murcie)", aliases=["brocoli"], piece=400),
     "carotte": dict(europe=[4, 5, 6, 7, 8], origins="Espagne, Italie", aliases=["carotte"], piece=100,
                     units={"botte": 500}),
-    "champignonmorille": dict(aliases=["morille"], piece=10),
+    "champignonmorille": dict(label="Morille", aliases=["morille"], piece=10),
     "chou": dict(aliases=["chou", "chou vert", "chou blanc", "chou rouge", "chou frise", "chou pointu"], piece=1000),
     "choudebruxelles": dict(aliases=["chou de bruxelles"], piece=15),
     "choufleur": dict(europe=[10, 11, 12, 1, 2, 3, 4], origins="Espagne, Italie", aliases=["chou fleur"], piece=800),
@@ -508,6 +510,9 @@ def main():
             sys.exit(f"Agribalyse no longer has {food[2]!r} (food {food[0]})")
 
     produce_lines, produce_foods = [], []
+    for item in produce.values():
+        item["ademe_name"] = item["name"]
+        item["name"] = PRODUCE[item["slug"]].get("label", item["name"])
     order = sorted(produce.values(), key=lambda p: p["name"])
     for item in order:
         slug, extra = item["slug"], PRODUCE[item["slug"]]
@@ -533,7 +538,7 @@ def main():
             f"            id: {swift_string('produce:' + slug)}, name: {swift_string(item['name'])},\n"
             f"            aliases: [{', '.join(swift_string(a) for a in extra['aliases'])}],\n"
             f"            kgCO2ePerKg: {swift_double(item['ecv'])},\n"
-            f"            source: {swift_string('Impact CO2 (ADEME) : ' + item['name'])},\n"
+            f"            source: {swift_string('Impact CO2 (ADEME) : ' + item['ademe_name'])},\n"
             f"            produceID: {swift_string(slug)},\n"
             f"            gramsPerPiece: {swift_double(piece) if piece else 'nil'},\n"
             f"            gramsPerMilliliter: 1,\n"

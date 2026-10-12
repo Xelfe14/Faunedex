@@ -156,16 +156,6 @@ extension FoodCatalog {
             unitGrams: [:]
         ),
         Food(
-            id: "produce:champignonmorille", name: "Champignon (morille crue)",
-            aliases: ["morille"],
-            kgCO2ePerKg: 6.175,
-            source: "Impact CO2 (ADEME) : Champignon (morille crue)",
-            produceID: "champignonmorille",
-            gramsPerPiece: 10.0,
-            gramsPerMilliliter: 1,
-            unitGrams: [:]
-        ),
-        Food(
             id: "produce:chou", name: "Chou",
             aliases: ["chou", "chou vert", "chou blanc", "chou rouge", "chou frise", "chou pointu"],
             kgCO2ePerKg: 0.8476,
@@ -426,7 +416,7 @@ extension FoodCatalog {
             unitGrams: [:]
         ),
         Food(
-            id: "produce:mangue", name: "Mangue (importée par avion)",
+            id: "produce:mangue", name: "Mangue (avion)",
             aliases: ["mangue importee par avion", "mangue par avion"],
             kgCO2ePerKg: 11.6555,
             source: "Impact CO2 (ADEME) : Mangue (importée par avion)",
@@ -436,7 +426,7 @@ extension FoodCatalog {
             unitGrams: [:]
         ),
         Food(
-            id: "produce:manguebateau", name: "Mangue (importée par bateau)",
+            id: "produce:manguebateau", name: "Mangue (bateau)",
             aliases: ["mangue"],
             kgCO2ePerKg: 0.7275,
             source: "Impact CO2 (ADEME) : Mangue (importée par bateau)",
@@ -462,6 +452,16 @@ extension FoodCatalog {
             source: "Impact CO2 (ADEME) : Melon",
             produceID: "melon",
             gramsPerPiece: 1000.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
+            id: "produce:champignonmorille", name: "Morille",
+            aliases: ["morille"],
+            kgCO2ePerKg: 6.175,
+            source: "Impact CO2 (ADEME) : Champignon (morille crue)",
+            produceID: "champignonmorille",
+            gramsPerPiece: 10.0,
             gramsPerMilliliter: 1,
             unitGrams: [:]
         ),

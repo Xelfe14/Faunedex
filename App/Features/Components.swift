@@ -91,15 +91,19 @@ struct Chip: View {
     var tint: Color = .secondary
 
     var body: some View {
-        Label {
-            Text(text)
-        } icon: {
+        // A plain row at its natural size rather than a Label: a Label takes
+        // its style from the container, and inside a List on iOS 26 it shrank
+        // to its icon, leaving tall empty pills in the recipe header.
+        HStack(spacing: 4) {
             if let systemImage { Image(systemName: systemImage) }
+            Text(text).lineLimit(1)
         }
+        .fixedSize()
         .font(.caption.weight(.medium))
         .padding(.horizontal, 9).padding(.vertical, 4)
         .background(tint.opacity(0.13), in: Capsule())
         .foregroundStyle(tint)
+        .accessibilityElement(children: .combine)
     }
 }
 
