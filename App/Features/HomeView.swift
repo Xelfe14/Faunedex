@@ -101,7 +101,7 @@ struct AppsHomeView: View {
             section: .cuisine,
             stat: "\(plural(recipes.count, "recette")) · \(inSeason) fruits et légumes de saison",
             glimpse: seasonGlimpse,
-            primary: AppAction(title: "Demander une recette", symbol: "sparkles") { open(.cuisine(.demander)) },
+            primary: AppAction(title: "Demander", symbol: "sparkles") { open(.cuisine(.demander)) },
             open: { open(AppSection.cuisine.entry) }
         ) {
             Button { open(.cuisine(.saisons)) } label: { ShortcutLabel(title: "Saisons", symbol: "calendar") }
@@ -197,22 +197,23 @@ private struct AppCard<Shortcuts: View>: View {
             .accessibilityLabel("Ouvrir \(section.frenchLabel)")
             .accessibilityHint(stat)
 
-            HStack(spacing: 8) {
+            // Wraps onto a second line rather than hiding a shortcut off the
+            // edge: an iPhone XS is 375 points wide.
+            FlowRow(spacing: 8) {
                 Button(action: primary.perform) {
                     Label(primary.title, systemImage: primary.symbol)
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
+                        .fixedSize()
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                        .frame(height: 34)
                         .background(section.tint, in: Capsule())
                         .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) { shortcuts() }
-                }
-                .tint(section.tint)
+                shortcuts()
             }
+            .tint(section.tint)
         }
         .padding(16)
         .cardSurface()
@@ -238,7 +239,7 @@ private struct ShortcutLabel: View {
             .lineLimit(1)
             .fixedSize()
             .padding(.horizontal, 10)
-            .padding(.vertical, 7)
+            .frame(height: 34)
             .background(Color.primary.opacity(0.06), in: Capsule())
             .foregroundStyle(.tint)
     }
