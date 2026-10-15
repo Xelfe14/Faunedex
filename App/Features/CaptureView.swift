@@ -51,7 +51,7 @@ struct CaptureView: View {
     @ViewBuilder private var banners: some View {
         VStack(spacing: 8) {
             if !keys.hasGeminiKey {
-                banner("Ajoutez votre clé Gemini dans Réglages pour identifier vos photos.",
+                banner("Ajoutez votre clé Gemini dans Réglages (la roue dentée de l’accueil) pour identifier vos photos.",
                        systemImage: "key.fill", tint: .orange)
             }
             if !connectivity.isOnline {
