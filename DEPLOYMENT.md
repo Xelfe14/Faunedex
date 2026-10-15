@@ -89,11 +89,16 @@ Whenever there is new code (a fix, a new screen), with the iPhone plugged in:
 cd ~/Faunedex && ./update.sh
 ```
 
-It keeps your signing team, downloads the new code and rebuilds the Xcode
-project. Then in Xcode: the iPhone as destination, and **Run** (⌘R). The new
-version installs over the old one, and everything in the app (species,
-recipes, cards, your Gemini key) stays. Xcode may say the project changed on
-disk: choose to reload it.
+It closes Xcode, keeps your signing team, downloads the new code, rebuilds the
+Xcode project and opens it again. Wait for *Resolving packages* at the top of
+the window to finish, then: the iPhone as destination, and **Run** (⌘R). The
+new version installs over the old one, and everything in the app (species,
+recipes, cards, your Gemini key) stays.
+
+**"Missing package product 'FlaunedexCore'"** means Xcode kept an old view of
+the project. Run `./update.sh --clean`, which also empties Xcode's build cache
+for the app. If it persists: **File → Packages → Reset Package Caches**. The
+yellow *Update to recommended settings* warning is harmless; leave it.
 
 The very first time, `update.sh` isn't on the Mac yet, so get it with
 `cd ~/Faunedex && git pull` and then run `./update.sh`.
