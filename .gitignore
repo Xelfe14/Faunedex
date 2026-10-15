@@ -23,6 +23,8 @@ Package.resolved
 
 # Secrets — never commit API keys
 Secrets.xcconfig
+# Your Apple Developer Team ID, written by ./update.sh
+Config/Team.xcconfig
 *.env
 
 # Fastlane / CI

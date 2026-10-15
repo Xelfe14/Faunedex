@@ -12,9 +12,6 @@ settings:
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
-    # Set your Apple Developer Team ID here (Xcode → Settings → Accounts), or
-    # select it in the Signing & Capabilities tab after generating the project.
-    DEVELOPMENT_TEAM: ""
 
 packages:
   FlaunedexCore:
@@ -32,6 +29,11 @@ targets:
           - "Flaunedex.entitlements"
     dependencies:
       - package: FlaunedexCore
+    # The signing team comes from Config/Team.xcconfig, kept out of git, so it
+    # survives regeneration. See Config/Signing.xcconfig.
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.taddeocarpinelli.flaunedex

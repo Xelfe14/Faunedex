@@ -1,0 +1,12 @@
+// Signing for the Flaunedex target.
+//
+// Your Apple Developer Team ID lives in Team.xcconfig, next to this file. It is
+// not committed, so it survives every `xcodegen generate` and every `git pull`.
+// ./update.sh writes it for you the first time, from the team you picked in
+// Xcode; or create it by hand with one line:
+//
+//     DEVELOPMENT_TEAM = ABCDE12345
+//
+// Without it the project still builds (CI signs nothing), and Xcode asks for a
+// team in Signing & Capabilities.
+#include? "Team.xcconfig"

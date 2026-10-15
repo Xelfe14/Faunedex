@@ -57,6 +57,15 @@ jobs:
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO
+      # The Team ID sits in an uncommitted Config/Team.xcconfig so that
+      # regenerating the project never loses it. Check Xcode really reads it.
+      - name: Signing team comes from Team.xcconfig
+        run: |
+          settings() { xcodebuild -showBuildSettings -project Flaunedex.xcodeproj -scheme Flaunedex -configuration Debug -derivedDataPath build; }
+          settings | grep -E '^ *DEVELOPMENT_TEAM = .+' && exit 1 || echo "No team without Team.xcconfig, as expected"
+          echo 'DEVELOPMENT_TEAM = ABCDE12345' > Config/Team.xcconfig
+          settings | grep -E '^ *DEVELOPMENT_TEAM = ABCDE12345$'
+          rm Config/Team.xcconfig
 
   app:
     name: iOS app
@@ -131,11 +140,13 @@ jobs:
             sleep 7
             xcrun simctl io "$UDID" screenshot "screenshots/$name.png"
           }
-          shoot 1-saisons -previewScreen saisons
-          shoot 2-produit -previewScreen produit
-          shoot 3-impact -previewScreen impact
-          shoot 4-recette -previewRecipeDetail
-          shoot 5-demander -previewScreen demander
+          shoot 1-accueil -previewScreen accueil
+          shoot 2-fiches -previewScreen fiches
+          shoot 3-fiche -previewScreen fiche
+          shoot 4-reviser -previewScreen reviser
+          shoot 5-apprendre -previewScreen apprendre
+          shoot 6-cuisine -previewScreen cuisine
+          shoot 7-nature -previewScreen nature
 
       - name: Keep the screenshots
         if: always()
