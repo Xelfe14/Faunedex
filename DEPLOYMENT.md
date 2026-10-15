@@ -42,8 +42,9 @@ ID and approval takes longer.
    **Background Modes → Remote notifications** on when they appear: they come from
    the entitlements and `Info.plist`, and are how iCloud keeps the data backed up.
 
-> `project.yml` sets `DEVELOPMENT_TEAM: ""`. Paste your 10-character Team ID
-> there once you know it, so `xcodegen generate` keeps the setting.
+> Once the team is picked, run `./update.sh` once: it saves the team to
+> `Config/Team.xcconfig` (kept out of git), so regenerating the project never
+> asks for it again.
 
 > **Staying on the free Apple ID instead?** Free accounts cannot sign iCloud or
 > push. Remove the three iCloud keys and `aps-environment` from
@@ -55,7 +56,11 @@ ID and approval takes longer.
 1. Plug the iPhone into the Mac, unlock it, and tap **Trust**.
 2. On the iPhone: **Réglages → Confidentialité et sécurité → Mode développeur** →
    on, then restart when asked. (The switch appears once Xcode has seen the phone.)
-3. In Xcode, pick the iPhone as the run destination and press **Run** (⌘R).
+3. In Xcode, pick the iPhone as the run destination and press **Run** (⌘R). The
+   destination is the box at the top centre of the window, right of
+   *Flaunedex*. "iPhone 16" or "iPhone 16 Pro" there is a **simulator** on the Mac;
+   your phone is listed under **iOS Device**, by its name. If it is greyed out,
+   Xcode is still preparing it: wait for the progress bar at the top to finish.
 4. The first launch may say the developer is not trusted: **Réglages → Général →
    VPN et gestion de l'appareil** → your Apple ID → **Faire confiance**.
 
@@ -64,15 +69,34 @@ ID and approval takes longer.
 These are the first calls the app will ever make for real, so do them before
 relying on it in the field:
 
-1. **Réglages** in the app → paste your Gemini key.
+1. The gear at the top right of the home screen (**Réglages**) → paste your
+   Gemini key. The one key serves the three apps.
 2. Check the **Sauvegarde** row reads *Sauvegarde iCloud active*. *iCloud non
    connecté* means the iPhone isn't signed in to iCloud; the app still works, it
    just isn't backed up.
 3. **Capturer**: photograph a plant or an animal. This is the first identification
    ever sent to Gemini.
 4. **Cuisine → Demander**: ask for one recipe. This is the first recipe request.
+5. **Savoirs → Apprendre**: ask for one card. This is the first card request.
 
-If a scan or a recipe fails, that is the thing to look at first.
+If a scan, a recipe or a card fails, that is the thing to look at first.
+
+## Install a new version
+
+Whenever there is new code (a fix, a new screen), with the iPhone plugged in:
+
+```bash
+cd ~/Faunedex && ./update.sh
+```
+
+It keeps your signing team, downloads the new code and rebuilds the Xcode
+project. Then in Xcode: the iPhone as destination, and **Run** (⌘R). The new
+version installs over the old one, and everything in the app (species,
+recipes, cards, your Gemini key) stays. Xcode may say the project changed on
+disk: choose to reload it.
+
+The very first time, `update.sh` isn't on the Mac yet, so get it with
+`cd ~/Faunedex && git pull` and then run `./update.sh`.
 
 ## Keep it alive
 
@@ -93,8 +117,8 @@ Only worth it to install without a cable, or to share the app with someone.
   26.4.1 onwards needs macOS Tahoe 26.2.
 - Before the first upload, **deploy the CloudKit schema to Production**
   (<https://icloud.developer.apple.com/dashboard/> → container → *Deploy Schema
-  Changes*, after `CD_Species`, `CD_Sighting` and `CD_Recipe` exist in
-  Development). TestFlight builds talk to Production; skipping this silently
+  Changes*, after `CD_Species`, `CD_Sighting`, `CD_Recipe` and `CD_KnowledgeCard`
+  exist in Development). TestFlight builds talk to Production; skipping this silently
   breaks sync.
 - Create the app in App Store Connect, then **Product → Archive → Distribute App →
   App Store Connect → Upload**, and add yourself as an internal tester.

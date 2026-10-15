@@ -1,6 +1,8 @@
 # 🌿 Flaunedex
 
-Two things in one app, sharing a design language, a store and a single Gemini key.
+Three apps in one, sharing a design language, a store and a single Gemini key. The app opens on a
+home screen that shows the three side by side; each has its own tab bar, and its first tab,
+**Accueil**, comes back home.
 
 **Faune & Flore** is a personal Pokédex for European wildlife. Photograph a plant or animal in the
 field, and Google **Gemini** identifies it and writes a readable French card (a *spécificité* + a
@@ -16,6 +18,11 @@ different table, or rewrite the whole thing as free text.
 months across, coloured by where it comes from each month seen from Paris (France, Southern Europe,
 or far away). Every recipe shows its carbon footprint, flags the ingredients that are out of season,
 and can ask Gemini for a lower-impact version. Asking for a recipe cooks with the season by default.
+
+**Savoirs** is a deck of knowledge cards. Ask Gemini about anything ("pourquoi le ciel est bleu", "la
+bataille de Marignan") and get a card back: the sentence to remember, a short explanation, the points
+to retain, a review question with its answer, and a picture and link from Wikipedia. Or write the card
+yourself. Cards are shelved by theme and come back as flashcards on a spaced-repetition schedule.
 
 Native SwiftUI · SwiftData + iCloud · offline-first · French throughout.
 
@@ -34,15 +41,18 @@ Flaunedex/
 │  │   ├─ Cuisine/            Recipe units, prompt + schema, text format, dish photos,
 │  │   │   ├─ Saisons/          the seasonal calendar (generated from ADEME data)
 │  │   │   └─ Impact/           ingredient matching and recipe carbon footprints
+│  │   ├─ Savoirs/            Knowledge card schema + prompt, parser, review scheduler
 │  │   ├─ Media/              EXIF GPS tagging, and the GPS-free copy sent to Gemini
 │  │   └─ Networking/
-│  └─ Tests/FlaunedexCoreTests/  227 tests, run with `swift test` (no Xcode needed)
+│  └─ Tests/FlaunedexCoreTests/  249 tests, run with `swift test` (no Xcode needed)
 ├─ App/                      The iOS app (SwiftUI, SwiftData, AVFoundation, MapKit, CloudKit)
 │  ├─ FlaunedexApp.swift
-│  ├─ Persistence/           SwiftData models (Species, Sighting, Recipe)
-│  ├─ Services/              Camera, location, geocoding, keychain, scan queue, recipe store
-│  └─ Features/              The screens, with Features/Cuisine/ for the recipe side
+│  ├─ Persistence/           SwiftData models (Species, Sighting, Recipe, KnowledgeCard)
+│  ├─ Services/              Camera, location, geocoding, keychain, scan queue, recipe and card stores
+│  └─ Features/              The screens: home and tab bars, then Features/Cuisine/ and Features/Savoirs/
 ├─ project.yml               XcodeGen project definition
+├─ Config/Signing.xcconfig   Reads your Team ID from Config/Team.xcconfig (not committed)
+├─ update.sh                 Pull, keep the signing team, regenerate: the one command to update
 ├─ App/Info.plist, App/Flaunedex.entitlements, App/PrivacyInfo.xcprivacy
 ├─ Tools/food-data/          Regenerates the seasonal and footprint tables from ADEME's datasets
 ├─ .github/workflows/ci.yml  Core tests + app builds on Xcode 26, on every push
@@ -93,21 +103,23 @@ Wikimedia images) so you can explore the UI immediately:
 xcrun simctl launch booted com.taddeocarpinelli.flaunedex -seedSampleData
 ```
 
-That seeds four species and three recipes, all with live Wikimedia images.
+That seeds four species, three recipes and four knowledge cards, with live Wikimedia images.
 
-Add `-previewSpeciesDetail` or `-previewRecipeDetail` to open a card directly, or
-`-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages|recettes|demander|saisons>`
-to jump to any screen. Set these under **Product → Scheme → Edit Scheme → Arguments** to
+Add `-previewSpeciesDetail` or `-previewRecipeDetail` to open a card directly, or `-previewScreen`
+with one of `accueil nature faune flore carte journal stats decouvertes reglages cuisine demander
+saisons produit impact fiches fiche apprendre reviser` to jump to any screen. Set these under **Product → Scheme → Edit Scheme → Arguments** to
 use them from Xcode. They are compiled out of Release builds.
 
 In Xcode:
 1. Select the **Flaunedex** target → **Signing & Capabilities** → pick your Team; Xcode provisions
-   automatically. Confirm the **iCloud → CloudKit** capability is present with container
+   automatically. `./update.sh` then saves that team to `Config/Team.xcconfig`, so regenerating the
+   project never loses it. Confirm the **iCloud → CloudKit** capability is present with container
    `iCloud.com.taddeocarpinelli.flaunedex` (rename the container + bundle id to your own if you like —
    change them in `project.yml`, `App/Info.plist`, and `App/Flaunedex.entitlements` together).
 2. Run on the **Simulator** to click through the UI (simulate a location via **Features → Location**).
    The camera only works on a **real device**.
-3. Launch on your iPhone, open **Réglages**, paste your Gemini key, then use **Capturer**.
+3. Launch on your iPhone, tap the gear on the home screen (**Réglages**), paste your Gemini key, then
+   open Faune & Flore and use **Capturer**.
 
 > **iOS version:** the project targets **iOS 17** for broad compatibility. The plan documents the
 > iOS 26 APIs (`MKReverseGeocodingRequest`, `BGContinuedProcessingTask`) you can adopt later — each is
@@ -121,6 +133,9 @@ The app is for one person on one phone (an iPhone XS on iOS 18), so it is instal
 Xcode: plug the phone in, turn on Developer Mode, press Run. With the paid account an install lasts a
 year and iCloud backs the data up. Step by step, including the first real scan and recipe request,
 in [DEPLOYMENT.md](DEPLOYMENT.md). TestFlight is described there too, as an option.
+
+To install a newer version later: `./update.sh` in the repository, then Run again in Xcode with the
+iPhone selected. Reinstalling over the app keeps everything it holds.
 
 ---
 
@@ -167,6 +182,24 @@ never scaled, because doubling a batch does not double its baking time.
 
 ---
 
+## How a knowledge card works (one ask)
+
+1. **Gemini** (same model, same key) returns a structured card: title, one of eleven themes, the one
+   sentence to remember, an explanation in short paragraphs, three to five points to retain, a review
+   question and its answer, an optional anecdote, and the title of the matching French Wikipedia
+   article. The prompt forbids invented dates, figures and quotations, and asks for uncertainty to be
+   stated rather than settled. Two depths: *l'essentiel* (about 120 words) or *approfondi* (about 350).
+2. **Picture and link** come from that Wikipedia article, through the same lookup as dish photos, with
+   the Commons licence credited. The article is the card's "en savoir plus", never its claimed source.
+3. **Then it is yours**: rewrite any field, add notes, star it, or ask Gemini to amend it ("plus
+   simple", "ajoute les dates clés"). A card edited by hand stops crediting the model.
+4. **Review** is a Leitner schedule: *Je sais* moves a card to the next box (1, 3, 7, 14, 30, 60, then
+   120 days), *Facile* skips one, *À revoir* sends it back to the start and brings it back at the end
+   of the same session. Due dates fall at the start of a day, so a card reviewed at 23:00 is due the
+   morning it is scheduled for. Free practice runs through every card without touching the schedule.
+
+---
+
 ## Seasons and carbon footprint
 
 1. **The calendar is ADEME's.** Impact CO2's 76 fruits and vegetables give the months each is
@@ -195,7 +228,7 @@ fails if a curated entry points at something the datasets no longer contain.
 Data from **GBIF** (CC BY), **Wikidata** (CC0), **Wikimedia Commons** (per-image CC/PD — attribution
 shown on each card), **IUCN Red List** (non-commercial), **Xeno-canto** (per-recording CC), and
 **ADEME** — Impact CO2 and Agribalyse 3.2 — for seasons and carbon footprints (Licence Ouverte 2.0).
-Identification is by Google Gemini and **can be wrong** — the app never gives edibility advice, and
+Identification, recipes and knowledge cards are by Google Gemini and **can be wrong** — the app never gives edibility advice, and
 toxicity notes always carry a caution. Contributing your sightings to iNaturalist (which feeds GBIF)
 is planned for a future version.
 
@@ -203,9 +236,9 @@ is planned for a future version.
 
 ## Status
 
-- ✅ `FlaunedexCore` — **227 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
+- ✅ `FlaunedexCore` — **249 passing tests** (`cd Core && swift test`), including a real EXIF-GPS
   round-trip, the GPS-free upload copy, the natural-range unlock rules, the recipe text round trip,
-  the season statuses and ingredient footprints,
+  the season statuses and ingredient footprints, the knowledge card parser and the review schedule,
   and both pipelines driven end to end over a scripted transport (so the wiring, the error statuses
   and the graceful degradations are exercised without an API key).
 - ✅ Builds with **Xcode 26** (the iOS 26 SDK App Store Connect requires) on every push, in GitHub
@@ -227,11 +260,14 @@ is planned for a future version.
   with its season, footprint and the recipes that use it; season pictograms and a carbon footprint on
   every recipe; seasonal cooking by default; and lower-impact versions. Seen running in the iOS 26
   simulator through CI's screenshots (an artifact on every run); not yet on the iPhone.
+- ✅ Three apps in one: the home screen, the three tab bars, and Savoirs (cards from Gemini or by
+  hand, themes, search, favourites, editing, Gemini amendments, flashcard review with a due-count
+  badge). Built on Xcode 16.4 and 26 and seen in CI's screenshots; not yet on the iPhone.
 - ✅ Verified live: Wikipedia/Commons image lookup, GBIF nearby suggestions, and batched Wikidata
   French-name resolution all exercised against the real APIs from the running app.
 - ⏳ Not yet done: run on a **real iPhone** (the camera and CoreLocation can't be exercised in the
   simulator), a first **real Gemini call** (identification and recipes are tested up to the wire,
-  never against the live API), the Saisons screens on the iPhone itself, and the account-holder steps in
+  never against the live API), the Saisons and Savoirs screens on the iPhone itself, and the account-holder steps in
   [DEPLOYMENT.md](DEPLOYMENT.md) — Apple Developer enrolment, signing, Developer Mode and the install
   from Xcode. iNaturalist sharing remains the planned v2.
 
