@@ -2,21 +2,32 @@ import SwiftUI
 import SwiftData
 import FlaunedexCore
 
-/// The two worlds the app contains.
+/// The three apps Flaunedex holds.
 ///
-/// Flaunedex started as a field companion and now also holds a recipe bank.
-/// They share the storage, the API key and the design language, but nothing
-/// else: a tab bar carrying Faune, Flore, Capturer, Carte and Recettes would
-/// serve neither. So the app switches wholesale between them, and remembers
-/// which one you were in.
-enum AppSection: String, CaseIterable {
+/// They share the storage, the Gemini key and the design language, but each is
+/// its own small app with its own tab bar. None is nested inside another: the
+/// home screen shows all three side by side, and every app has the same
+/// "Accueil" tab, first in its bar, to come back to it.
+enum AppSection: String, CaseIterable, Identifiable {
     case nature
     case cuisine
+    case savoirs
+
+    var id: String { rawValue }
 
     var frenchLabel: String {
         switch self {
         case .nature: return "Faune & Flore"
         case .cuisine: return "Cuisine"
+        case .savoirs: return "Savoirs"
+        }
+    }
+
+    var tagline: String {
+        switch self {
+        case .nature: return "Identifier et collectionner les espèces"
+        case .cuisine: return "Recettes, saisons et empreinte carbone"
+        case .savoirs: return "Fiches de connaissances à réviser"
         }
     }
 
@@ -24,34 +35,71 @@ enum AppSection: String, CaseIterable {
         switch self {
         case .nature: return "leaf.fill"
         case .cuisine: return "fork.knife"
+        case .savoirs: return "lightbulb.fill"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .nature: return Theme.brand
+        case .cuisine: return Theme.cuisine
+        case .savoirs: return Theme.savoirs
+        }
+    }
+
+    /// Where the app opens when its card is tapped.
+    var entry: AppDestination {
+        switch self {
+        case .nature: return .nature(.faune)
+        case .cuisine: return .cuisine(.recettes)
+        case .savoirs: return .savoirs(.fiches)
         }
     }
 }
 
-/// The app shell. Creates the two coordinators once the model context exists
-/// and hands them to whichever world is on screen.
+enum NatureTab: Hashable { case home, faune, flore, capture, carte }
+enum CuisineTab: Hashable { case home, recettes, demander, saisons }
+enum SavoirsTab: Hashable { case home, fiches, apprendre, reviser }
+
+/// An app, and the tab it opens on, so the home screen's shortcuts ("Capturer",
+/// "Réviser") land on the right screen.
+enum AppDestination: Hashable {
+    case nature(NatureTab)
+    case cuisine(CuisineTab)
+    case savoirs(SavoirsTab)
+
+    var section: AppSection {
+        switch self {
+        case .nature: return .nature
+        case .cuisine: return .cuisine
+        case .savoirs: return .savoirs
+        }
+    }
+}
+
+/// The app shell. Creates the coordinators once the model context exists, then
+/// shows the home screen or whichever app is open.
 struct RootTabView: View {
     @Environment(\.modelContext) private var context
     @Environment(APIKeys.self) private var keys
     @Environment(Connectivity.self) private var connectivity
 
-    @AppStorage("appSection") private var storedSection = AppSection.nature.rawValue
+    /// The open app, kept across a relaunch by the system (not across a
+    /// force-quit, which lands on the home screen as a fresh start should).
+    @SceneStorage("openApp") private var storedApp = ""
+    @State private var open: AppDestination?
 
     @State private var scan: ScanCoordinator?
     @State private var recipes: RecipeStore?
-
-    private var section: Binding<AppSection> {
-        Binding(
-            get: { AppSection(rawValue: storedSection) ?? .nature },
-            set: { storedSection = $0.rawValue }
-        )
-    }
+    @State private var knowledge: KnowledgeStore?
 
     #if DEBUG
     /// Debug-only preview routing so any screen can be inspected directly:
-    /// `-previewSpeciesDetail`, or `-previewScreen <faune|flore|carte|journal|stats|decouvertes|reglages|recettes|demander|saisons|produit|impact>`.
+    /// `-previewSpeciesDetail`, `-previewRecipeDetail`, or `-previewScreen <name>`
+    /// with a name from `previewDestination` below.
     @Query(sort: \Species.dexNumber) private var previewSpecies: [Species]
     @Query(sort: \Recipe.sortIndex) private var previewRecipes: [Recipe]
+    @Query(sort: \KnowledgeCard.createdAt, order: .reverse) private var previewCards: [KnowledgeCard]
 
     private var previewScreen: String? {
         let args = CommandLine.arguments
@@ -68,16 +116,32 @@ struct RootTabView: View {
 
     var body: some View {
         Group {
-            if let scan, let recipes {
+            if let scan, let recipes, let knowledge {
                 content
                     .environment(scan)
                     .environment(recipes)
+                    .environment(knowledge)
+                    // Captures queued offline are identified whichever app is
+                    // on screen when the connection comes back.
+                    .task(id: connectivity.becameOnlineTick) { await scan.processQueue() }
+                    .overlay {
+                        if let species = scan.newlyUnlocked {
+                            NewSpeciesCelebration(species: species) {
+                                withAnimation { scan.newlyUnlocked = nil }
+                            }
+                            .transition(.opacity)
+                            .zIndex(10)
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.25), value: scan.newlyUnlocked == nil)
             } else {
                 ProgressView()
                     .canvasBackground()
                     .task {
+                        open = AppSection(rawValue: storedApp)?.entry
                         scan = ScanCoordinator(context: context, keys: keys)
                         recipes = RecipeStore(context: context, keys: keys)
+                        knowledge = KnowledgeStore(context: context, keys: keys)
                     }
             }
         }
@@ -92,34 +156,51 @@ struct RootTabView: View {
         } else if let screen = previewScreen {
             previewDestination(screen)
         } else {
-            worlds
+            apps
         }
         #else
-        worlds
+        apps
         #endif
     }
 
-    @ViewBuilder private var worlds: some View {
-        switch section.wrappedValue {
-        case .nature:
-            NatureTabs(section: section)
-                .transition(.opacity)
-        case .cuisine:
-            CuisineTabs(section: section)
-                .transition(.opacity)
+    @ViewBuilder private var apps: some View {
+        Group {
+            switch open {
+            case nil:
+                AppsHomeView(open: show)
+            case .nature(let tab):
+                NatureTabs(start: tab, goHome: goHome)
+            case .cuisine(let tab):
+                CuisineTabs(start: tab, goHome: goHome)
+            case .savoirs(let tab):
+                SavoirsTabs(start: tab, goHome: goHome)
+            }
         }
+        .transition(.opacity)
+    }
+
+    private func show(_ destination: AppDestination) {
+        withAnimation(.easeInOut(duration: 0.2)) { open = destination }
+        storedApp = destination.section.rawValue
+    }
+
+    private func goHome() {
+        withAnimation(.easeInOut(duration: 0.2)) { open = nil }
+        storedApp = ""
     }
 
     #if DEBUG
     @ViewBuilder private func previewDestination(_ screen: String) -> some View {
         switch screen {
+        case "accueil": AppsHomeView(open: { _ in })
+        case "nature": NatureTabs(start: .faune, goHome: {})
         case "flore": DexView(realm: .plant)
         case "carte": SightingsMapView()
         case "journal": NavigationStack { JournalView() }
         case "stats": NavigationStack { StatsView() }
         case "decouvertes": NavigationStack { DiscoverView() }
         case "reglages": NavigationStack { SettingsView() }
-        case "recettes", "cuisine": CuisineTabs(section: section)
+        case "recettes", "cuisine": CuisineTabs(start: .recettes, goHome: {})
         case "demander": NavigationStack { RecipeAskView() }
         case "saisons": NavigationStack { SeasonsView() }
         case "produit":
@@ -142,156 +223,144 @@ struct RootTabView: View {
                     .navigationBarTitleDisplayMode(.inline)
                 }
             }
+        case "savoirs", "fiches": SavoirsTabs(start: .fiches, goHome: {})
+        case "apprendre": NavigationStack { KnowledgeAskView() }
+        case "reviser": SavoirsTabs(start: .reviser, goHome: {})
+        case "fiche":
+            if let card = previewCards.first(where: { $0.title == "Photosynthèse" }) ?? previewCards.first {
+                NavigationStack { KnowledgeCardView(card: card) }
+            }
         default: DexView(realm: .animal)
         }
     }
     #endif
 }
 
-// MARK: - Faune & Flore
+// MARK: - The way home
 
-/// The original app: capture, collection, map.
-private struct NatureTabs: View {
-    @Binding var section: AppSection
-
-    @Environment(ScanCoordinator.self) private var scan
-    @Environment(Connectivity.self) private var connectivity
-
+/// The first tab of every app. Selecting it doesn't show a page: it returns to
+/// the home screen, so the three apps are always one tap from each other.
+private struct HomeTabContent: View {
     var body: some View {
-        TabView {
-            DexView(realm: .animal)
-                .tabItem { Label("Faune", systemImage: "pawprint.fill") }
-            DexView(realm: .plant)
-                .tabItem { Label("Flore", systemImage: "leaf.fill") }
-            CaptureView()
-                .tabItem { Label("Capturer", systemImage: "camera.fill") }
-            SightingsMapView()
-                .tabItem { Label("Carte", systemImage: "map.fill") }
-            NatureMoreView(section: $section)
-                .tabItem { Label("Plus", systemImage: "ellipsis.circle.fill") }
-        }
-        .tint(Theme.brand)
-        .task(id: connectivity.becameOnlineTick) { await scan.processQueue() }
-        .overlay {
-            if let species = scan.newlyUnlocked {
-                NewSpeciesCelebration(species: species) {
-                    withAnimation { scan.newlyUnlocked = nil }
-                }
-                .transition(.opacity)
-                .zIndex(10)
-            }
-        }
-        .animation(.easeInOut(duration: 0.25), value: scan.newlyUnlocked == nil)
+        Theme.canvas.ignoresSafeArea()
     }
 }
 
-/// The "Plus" tab of the nature side.
-private struct NatureMoreView: View {
-    @Binding var section: AppSection
+private extension View {
+    func homeTabItem() -> some View {
+        tabItem { Label("Accueil", systemImage: "house.fill") }
+    }
+}
+
+/// A tab selection that sends the "Accueil" tab home instead of selecting it.
+private func homeAware<Tab: Hashable>(_ tab: Binding<Tab>, home: Tab, goHome: @escaping () -> Void) -> Binding<Tab> {
+    Binding(
+        get: { tab.wrappedValue },
+        set: { newValue in
+            if newValue == home { goHome() } else { tab.wrappedValue = newValue }
+        }
+    )
+}
+
+// MARK: - Faune & Flore
+
+/// The field companion: collection, capture, map.
+private struct NatureTabs: View {
+    let goHome: () -> Void
+    @State private var tab: NatureTab
+
+    init(start: NatureTab, goHome: @escaping () -> Void) {
+        _tab = State(initialValue: start == .home ? .faune : start)
+        self.goHome = goHome
+    }
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    SectionSwitchRow(target: .cuisine) {
-                        withAnimation { section = .cuisine }
-                    }
-                }
-                Section {
-                    NavigationLink { DiscoverView() } label: {
-                        Label("Découvertes", systemImage: "sparkle.magnifyingglass")
-                    }
-                    NavigationLink { JournalView() } label: {
-                        Label("Journal", systemImage: "book.closed.fill")
-                    }
-                    NavigationLink { StatsView() } label: {
-                        Label("Statistiques", systemImage: "chart.bar.fill")
-                    }
-                }
-                Section {
-                    NavigationLink { SettingsView() } label: {
-                        Label("Réglages", systemImage: "gearshape.fill")
-                    }
-                }
-            }
-            .navigationTitle("Plus")
+        TabView(selection: homeAware($tab, home: .home, goHome: goHome)) {
+            HomeTabContent()
+                .homeTabItem()
+                .tag(NatureTab.home)
+            DexView(realm: .animal)
+                .tabItem { Label("Faune", systemImage: "pawprint.fill") }
+                .tag(NatureTab.faune)
+            DexView(realm: .plant)
+                .tabItem { Label("Flore", systemImage: "leaf.fill") }
+                .tag(NatureTab.flore)
+            CaptureView()
+                .tabItem { Label("Capturer", systemImage: "camera.fill") }
+                .tag(NatureTab.capture)
+            SightingsMapView()
+                .tabItem { Label("Carte", systemImage: "map.fill") }
+                .tag(NatureTab.carte)
         }
+        .tint(Theme.brand)
     }
 }
 
 // MARK: - Cuisine
 
-/// The recipe bank, as its own small app.
+/// The recipe bank and the seasonal calendar.
 private struct CuisineTabs: View {
-    @Binding var section: AppSection
+    let goHome: () -> Void
+    @State private var tab: CuisineTab
+
+    init(start: CuisineTab, goHome: @escaping () -> Void) {
+        _tab = State(initialValue: start == .home ? .recettes : start)
+        self.goHome = goHome
+    }
 
     var body: some View {
-        TabView {
+        TabView(selection: homeAware($tab, home: .home, goHome: goHome)) {
+            HomeTabContent()
+                .homeTabItem()
+                .tag(CuisineTab.home)
             NavigationStack { RecipesView() }
                 .tabItem { Label("Recettes", systemImage: "book.pages.fill") }
+                .tag(CuisineTab.recettes)
             NavigationStack { RecipeAskView() }
                 .tabItem { Label("Demander", systemImage: "sparkles") }
+                .tag(CuisineTab.demander)
             NavigationStack { SeasonsView() }
                 .tabItem { Label("Saisons", systemImage: "calendar") }
-            CuisineMoreView(section: $section)
-                .tabItem { Label("Plus", systemImage: "ellipsis.circle.fill") }
+                .tag(CuisineTab.saisons)
         }
         .tint(Theme.cuisine)
     }
 }
 
-private struct CuisineMoreView: View {
-    @Binding var section: AppSection
+// MARK: - Savoirs
 
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    SectionSwitchRow(target: .nature) {
-                        withAnimation { section = .nature }
-                    }
-                }
-                Section {
-                    NavigationLink { SettingsView() } label: {
-                        Label("Réglages", systemImage: "gearshape.fill")
-                    }
-                } footer: {
-                    Text("La même clé Gemini sert à identifier les espèces et à écrire les recettes.")
-                }
-            }
-            .navigationTitle("Plus")
-        }
+/// The knowledge cards: the collection, asking for a new one, and review.
+private struct SavoirsTabs: View {
+    let goHome: () -> Void
+    @State private var tab: SavoirsTab
+    @Query private var cards: [KnowledgeCard]
+
+    init(start: SavoirsTab, goHome: @escaping () -> Void) {
+        _tab = State(initialValue: start == .home ? .fiches : start)
+        self.goHome = goHome
     }
-}
 
-/// The row that moves between the two worlds. Deliberately prominent, and
-/// deliberately in the same place on both sides.
-private struct SectionSwitchRow: View {
-    let target: AppSection
-    let action: () -> Void
-
-    private var tint: Color { target == .cuisine ? Theme.cuisine : Theme.brand }
+    private var dueCount: Int {
+        let now = Date.now
+        return cards.filter { $0.isDue(at: now) }.count
+    }
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(tint.opacity(0.15)).frame(width: 40, height: 40)
-                    Image(systemName: target.symbolName).foregroundStyle(tint)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Aller dans \(target.frenchLabel)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text(target == .cuisine ? "Votre banque de recettes" : "Votre collection d'espèces")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "arrow.right").font(.footnote.weight(.bold)).foregroundStyle(tint)
-            }
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
+        TabView(selection: homeAware($tab, home: .home, goHome: goHome)) {
+            HomeTabContent()
+                .homeTabItem()
+                .tag(SavoirsTab.home)
+            NavigationStack { KnowledgeListView() }
+                .tabItem { Label("Fiches", systemImage: "rectangle.stack.fill") }
+                .tag(SavoirsTab.fiches)
+            NavigationStack { KnowledgeAskView() }
+                .tabItem { Label("Apprendre", systemImage: "sparkles") }
+                .tag(SavoirsTab.apprendre)
+            NavigationStack { KnowledgeReviewView() }
+                .tabItem { Label("Réviser", systemImage: "rectangle.on.rectangle.angled") }
+                .badge(dueCount)
+                .tag(SavoirsTab.reviser)
         }
-        .buttonStyle(.plain)
+        .tint(Theme.savoirs)
     }
 }

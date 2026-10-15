@@ -31,6 +31,10 @@ enum Theme {
     /// Faune's ochre or Flore's green.
     static let cuisine = Color(light: .init(r: 0.72, g: 0.28, b: 0.18),
                                dark:  .init(r: 0.93, g: 0.52, b: 0.40))
+    /// Savoirs accent (ink blue): the third world, with a colour of its own
+    /// next to the forest green and the paprika.
+    static let savoirs = Color(light: .init(r: 0.20, g: 0.32, b: 0.58),
+                               dark:  .init(r: 0.56, g: 0.68, b: 0.95))
 
     /// Calendar fill for a month: solid green for the French season, the same
     /// green washed out for Southern Europe, grey for far imports, and almost

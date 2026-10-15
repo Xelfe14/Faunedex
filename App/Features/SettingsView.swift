@@ -31,8 +31,11 @@ struct SettingsView: View {
             } header: {
                 Text("Gemini (obligatoire)")
             } footer: {
-                Link("Obtenir une clé sur Google AI Studio",
-                     destination: URL(string: "https://aistudio.google.com/app/apikey")!)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("La même clé sert aux trois apps : identifier les espèces, écrire les recettes, rédiger les fiches.")
+                    Link("Obtenir une clé sur Google AI Studio",
+                         destination: URL(string: "https://aistudio.google.com/app/apikey")!)
+                }
             }
 
             Section {
@@ -57,7 +60,9 @@ struct SettingsView: View {
                 Text("Identification : Google Gemini (\(FlaunedexConfig.geminiModel)).")
                 Text("Taxonomie & répartition : GBIF.")
                 Text("Noms & statut : Wikidata. Images : Wikimedia Commons. Chants : Xeno-canto.")
-                Text("Les identifications par IA peuvent se tromper ; ne consommez ou ne manipulez jamais une espèce sur cette seule base.")
+                Text("Recettes et fiches : Google Gemini. Photos des plats et images des fiches : Wikipédia et Wikimedia Commons.")
+                Text("Saisons et empreinte carbone : ADEME (Impact CO2, Agribalyse 3.2), Licence Ouverte 2.0.")
+                Text("Les identifications, recettes et fiches écrites par IA peuvent se tromper ; ne consommez ou ne manipulez jamais une espèce sur cette seule base.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

@@ -307,3 +307,136 @@ final class Recipe {
         updatedAt = .now
     }
 }
+
+/// A knowledge card in the Savoirs collection: something worth knowing,
+/// explained once, then reviewed until it sticks.
+///
+/// CloudKit-safe on the same terms as the other models: every stored property
+/// has a default, no unique constraint, enums held as raw strings.
+@Model
+final class KnowledgeCard {
+    var id: UUID = UUID()
+    var title: String = ""
+    var themeRaw: String = KnowledgeTheme.divers.rawValue
+    var summaryFR: String?
+    var bodyFR: String = ""
+    var keyPoints: [String] = []
+    var question: String?
+    var answer: String?
+    var funFactFR: String?
+    var tags: [String] = []
+
+    // MARK: The learner's own layer
+
+    /// Never written by the model.
+    var notes: String?
+    var isFavorite: Bool = false
+
+    // MARK: Picture and link
+
+    /// The Wikipedia article the card is illustrated from. The text itself is
+    /// the model's, and the card says so; the article is "en savoir plus".
+    var wikipediaQuery: String?
+    var imageURLString: String?
+    var thumbURLString: String?
+    var localImagePath: String?
+    var imageArtist: String?
+    var imageLicenseShort: String?
+    var imageLicenseURL: String?
+    var imageSourcePageURL: String?
+    var articleURLString: String?
+
+    // MARK: Review
+
+    var reviewBox: Int = 0
+    /// Nil until the first review: a new card is always due.
+    var reviewDueAt: Date?
+    var reviewCount: Int = 0
+    var lapseCount: Int = 0
+    var lastReviewedAt: Date?
+
+    // MARK: Provenance
+
+    var sourceRaw: String = Recipe.Source.gemini.rawValue
+    var originalPrompt: String?
+    var createdAt: Date = Date.now
+    var updatedAt: Date = Date.now
+
+    init(id: UUID = UUID(), title: String, source: Source = .gemini) {
+        self.id = id
+        self.title = title
+        self.sourceRaw = source.rawValue
+    }
+
+    /// The same three origins as a recipe, and the labels read right for both:
+    /// "une recette" and "une fiche" are feminine alike.
+    typealias Source = Recipe.Source
+
+    // MARK: Typed accessors
+
+    var source: Source {
+        get { Source(rawValue: sourceRaw) ?? .gemini }
+        set { sourceRaw = newValue.rawValue }
+    }
+    var theme: KnowledgeTheme {
+        get { KnowledgeTheme(rawValue: themeRaw) ?? .divers }
+        set { themeRaw = newValue.rawValue }
+    }
+    var articleURL: URL? { articleURLString.flatMap(URL.init(string:)) }
+
+    var review: ReviewState {
+        get {
+            ReviewState(box: reviewBox, dueAt: reviewDueAt, reviewCount: reviewCount,
+                        lapseCount: lapseCount, lastReviewedAt: lastReviewedAt)
+        }
+        set {
+            reviewBox = newValue.box
+            reviewDueAt = newValue.dueAt
+            reviewCount = newValue.reviewCount
+            lapseCount = newValue.lapseCount
+            lastReviewedAt = newValue.lastReviewedAt
+        }
+    }
+
+    func isDue(at now: Date = .now) -> Bool { review.isDue(at: now) }
+
+    /// The front of the flashcard. A card written by hand may have no question
+    /// yet, and is still reviewable on its title.
+    var reviewQuestion: String {
+        if let question, !question.trimmingCharacters(in: .whitespaces).isEmpty { return question }
+        return "Que retenir de « \(title) » ?"
+    }
+
+    /// The back of the flashcard: the answer, or failing that the one-line
+    /// summary, or the points to remember.
+    var reviewAnswer: String {
+        if let answer, !answer.trimmingCharacters(in: .whitespaces).isEmpty { return answer }
+        if let summaryFR, !summaryFR.isEmpty { return summaryFR }
+        return keyPoints.joined(separator: "\n")
+    }
+
+    // MARK: Bridging to the pure value type
+
+    var draft: KnowledgeDraft {
+        KnowledgeDraft(title: title, theme: theme, summaryFR: summaryFR, bodyFR: bodyFR,
+                       keyPointsFR: keyPoints, questionFR: question, answerFR: answer,
+                       funFactFR: funFactFR, wikipediaQuery: wikipediaQuery, tags: tags)
+    }
+
+    /// Overwrite the card's content from a draft, leaving the learner's layer
+    /// (notes, favourite, review history, picture) untouched.
+    func apply(_ raw: KnowledgeDraft) {
+        let draft = raw.normalized()
+        title = draft.title
+        theme = draft.theme
+        summaryFR = draft.summaryFR
+        bodyFR = draft.bodyFR
+        keyPoints = draft.keyPointsFR
+        question = draft.questionFR
+        answer = draft.answerFR
+        funFactFR = draft.funFactFR
+        if let query = draft.wikipediaQuery { wikipediaQuery = query }
+        tags = draft.tags
+        updatedAt = .now
+    }
+}

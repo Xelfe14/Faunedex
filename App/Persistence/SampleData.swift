@@ -61,6 +61,7 @@ enum SampleData {
             }
         }
         seedRecipes(into: context)
+        seedKnowledge(into: context)
         try? context.save()
     }
 
@@ -101,6 +102,141 @@ enum SampleData {
             context.insert(recipe)
         }
     }
+
+    /// Four knowledge cards at different points of the review cycle (new, due,
+    /// learned, well known), so Savoirs and Réviser have something to show.
+    /// The last one is written by hand and ties back to a sample plant.
+    static func seedKnowledge(into context: ModelContext) {
+        let existing = (try? context.fetch(FetchDescriptor<KnowledgeCard>())) ?? []
+        guard existing.isEmpty else { return }
+
+        let now = Date()
+        let day: TimeInterval = 86_400
+        for (index, spec) in knowledgeSpecs.enumerated() {
+            let card = KnowledgeCard(title: spec.draft.title, source: spec.source)
+            card.apply(spec.draft)
+            card.notes = spec.notes
+            card.isFavorite = spec.favorite
+            card.imageURLString = spec.imageURL
+            card.thumbURLString = spec.imageURL
+            if spec.imageURL != nil {
+                card.imageArtist = "Wikimedia Commons"
+                card.imageLicenseShort = "CC BY-SA"
+            }
+            card.articleURLString = spec.articleURL
+            card.originalPrompt = spec.source == .manual ? nil : spec.draft.title.lowercased()
+            card.createdAt = now.addingTimeInterval(-Double(index + 1) * 3 * day)
+            if spec.box > 0 || spec.reviews > 0 {
+                card.review = ReviewState(
+                    box: spec.box,
+                    dueAt: ReviewScheduler.dueDate(inDays: spec.dueInDays, from: now),
+                    reviewCount: spec.reviews,
+                    lapseCount: spec.lapses,
+                    lastReviewedAt: now.addingTimeInterval(-day)
+                )
+            }
+            context.insert(card)
+        }
+    }
+
+    private struct KnowledgeSpec {
+        let draft: KnowledgeDraft
+        let source: KnowledgeCard.Source
+        let box: Int
+        let dueInDays: Int
+        let reviews: Int
+        let lapses: Int
+        let favorite: Bool
+        let notes: String?
+        let imageURL: String?
+        let articleURL: String
+    }
+
+    private static let knowledgeSpecs: [KnowledgeSpec] = [
+        KnowledgeSpec(
+            draft: KnowledgeDraft(
+                title: "Photosynthèse",
+                theme: .sciences,
+                summaryFR: "Les plantes fabriquent leur propre matière à partir de lumière, d'eau et de dioxyde de carbone, en rejetant du dioxygène.",
+                bodyFR: "La photosynthèse a lieu dans les chloroplastes des feuilles, grâce à un pigment vert, la chlorophylle, qui capte l'énergie de la lumière. Cette énergie sert à assembler le dioxyde de carbone de l'air et l'eau puisée par les racines en sucres, qui nourrissent la plante et forment son bois, ses feuilles et ses fruits.\n\nLe dioxygène rejeté vient de l'eau, et non du CO₂ : c'est en cassant des molécules d'eau que la plante libère l'oxygène que nous respirons. Presque toute la chaîne alimentaire terrestre repose sur ce mécanisme.",
+                keyPointsFR: [
+                    "Elle a lieu dans les chloroplastes, grâce à la chlorophylle.",
+                    "Entrées : lumière, eau et CO₂ ; sorties : sucres et dioxygène.",
+                    "L'oxygène libéré provient de l'eau.",
+                ],
+                questionFR: "D'où vient le dioxygène libéré par la photosynthèse ?",
+                answerFR: "De l'eau : la plante casse des molécules d'eau et rejette leur oxygène.",
+                funFactFR: "Le phytoplancton des océans assure à lui seul environ la moitié de la photosynthèse de la planète.",
+                wikipediaQuery: "Photosynthèse",
+                tags: ["biologie", "plantes"]
+            ),
+            source: .gemini, box: 0, dueInDays: 0, reviews: 0, lapses: 0, favorite: false, notes: nil,
+            imageURL: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Photosynth%C3%A8se_fr.svg/500px-Photosynth%C3%A8se_fr.svg.png",
+            articleURL: "https://fr.wikipedia.org/wiki/Photosynth%C3%A8se"
+        ),
+        KnowledgeSpec(
+            draft: KnowledgeDraft(
+                title: "Bataille de Marignan",
+                theme: .histoire,
+                summaryFR: "En septembre 1515, François Ier bat les mercenaires suisses près de Milan et s'empare du duché.",
+                bodyFR: "La bataille se déroule les 13 et 14 septembre 1515 à Marignan, aujourd'hui Melegnano, au sud-est de Milan. Le jeune roi François Ier, monté sur le trône quelques mois plus tôt, y affronte les Suisses qui défendent le duché de Milan pour le compte des Sforza.\n\nL'artillerie française et l'arrivée des alliés vénitiens le second jour décident de la victoire. Elle ouvre le Milanais à la France et conduit en 1516 à la « paix perpétuelle » avec les cantons suisses, qui fourniront ensuite des soldats aux rois de France.",
+                keyPointsFR: [
+                    "13 et 14 septembre 1515, à Marignan (Melegnano), près de Milan.",
+                    "Victoire de François Ier contre les Suisses.",
+                    "Elle mène à la paix perpétuelle de 1516 avec les cantons suisses.",
+                ],
+                questionFR: "Quelle année retenir pour Marignan, et contre qui François Ier s'y bat-il ?",
+                answerFR: "1515 : il y bat les mercenaires suisses qui défendent Milan.",
+                funFactFR: "Selon la tradition, François Ier se serait fait adouber chevalier sur le champ de bataille par Bayard, le « chevalier sans peur et sans reproche ».",
+                wikipediaQuery: "Bataille de Marignan",
+                tags: ["Renaissance", "France"]
+            ),
+            source: .gemini, box: 2, dueInDays: -1, reviews: 2, lapses: 0, favorite: true, notes: nil,
+            imageURL: nil,
+            articleURL: "https://fr.wikipedia.org/wiki/Bataille_de_Marignan"
+        ),
+        KnowledgeSpec(
+            draft: KnowledgeDraft(
+                title: "Pourquoi le ciel est bleu",
+                theme: .sciences,
+                summaryFR: "Les molécules de l'air diffusent bien plus la lumière bleue du Soleil que la rouge : le bleu nous arrive de tout le ciel.",
+                bodyFR: "La lumière du Soleil contient toutes les couleurs. En traversant l'atmosphère, elle rencontre des molécules d'azote et d'oxygène bien plus petites que sa longueur d'onde, qui la dévient dans toutes les directions : c'est la diffusion Rayleigh. Elle est d'autant plus forte que la longueur d'onde est courte, si bien que le bleu est diffusé plusieurs fois plus que le rouge.\n\nAu coucher du soleil, la lumière traverse une épaisseur d'air bien plus grande. Le bleu a été dispersé en chemin, et ce sont l'orangé et le rouge qui nous parviennent directement.",
+                keyPointsFR: [
+                    "La diffusion Rayleigh dévie surtout les courtes longueurs d'onde.",
+                    "Le bleu est diffusé plusieurs fois plus que le rouge.",
+                    "Au couchant, le long trajet dans l'air ne laisse passer que l'orangé et le rouge.",
+                ],
+                questionFR: "Pourquoi le ciel devient-il rouge au coucher du soleil ?",
+                answerFR: "La lumière traverse beaucoup plus d'air : le bleu est dispersé en chemin et seuls l'orangé et le rouge arrivent directement.",
+                funFactFR: "Le violet est diffusé plus encore que le bleu, mais le Soleil en émet moins et notre œil y est peu sensible : nous voyons donc le ciel bleu.",
+                wikipediaQuery: "Diffusion Rayleigh",
+                tags: ["physique", "lumière"]
+            ),
+            source: .gemini, box: 1, dueInDays: 1, reviews: 1, lapses: 0, favorite: false, notes: nil,
+            imageURL: nil,
+            articleURL: "https://fr.wikipedia.org/wiki/Diffusion_Rayleigh"
+        ),
+        KnowledgeSpec(
+            draft: KnowledgeDraft(
+                title: "Théorie des signatures",
+                theme: .sante,
+                summaryFR: "Croyance ancienne selon laquelle la forme d'une plante indique l'organe qu'elle soigne.",
+                bodyFR: "Répandue en Europe du Moyen Âge à la Renaissance, et défendue au XVIe siècle par Paracelse, elle voulait que la nature « signe » ses remèdes : une plante ressemblant à un organe devait le guérir.\n\nL'hépatique, dont la feuille à trois lobes rappelle un foie, passait ainsi pour soigner les maladies du foie. Aucune de ces correspondances n'a résisté à l'examen, mais bien des noms de plantes en gardent la trace.",
+                keyPointsFR: [
+                    "La forme d'une plante était censée révéler son usage médical.",
+                    "Défendue notamment par Paracelse au XVIe siècle.",
+                    "L'hépatique doit son nom à sa feuille en forme de foie.",
+                ],
+                questionFR: "Pourquoi l'hépatique s'appelle-t-elle ainsi ?",
+                answerFR: "Sa feuille à trois lobes rappelle un foie : selon la théorie des signatures, elle devait soigner le foie.",
+                tags: ["plantes", "médecine"]
+            ),
+            source: .manual, box: 3, dueInDays: 6, reviews: 4, lapses: 1, favorite: false,
+            notes: "Repérée en mars près de Chamonix : voir l'Hépatique dans Flore.",
+            imageURL: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Hepatica_nobilis_plant.JPG/500px-Hepatica_nobilis_plant.JPG",
+            articleURL: "https://fr.wikipedia.org/wiki/Th%C3%A9orie_des_signatures"
+        ),
+    ]
 
     private struct RecipeSpec {
         let title: String
