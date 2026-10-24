@@ -13,13 +13,17 @@ import FlaunedexCore
 /// photo is saved, `onCaptured` takes the user back where they came from, and
 /// the status pill follows the identification from there.
 struct CaptureView: View {
+    /// Whether this screen is really the one in front of the user: its tab is
+    /// selected and its app is on screen. Decided by the tab bar rather than by
+    /// appearance, because a tab view may build this screen, and run its tasks,
+    /// before it is ever shown; the camera must not run then.
+    var isVisible = true
     /// Called once a photo is safely queued.
     var onCaptured: () -> Void = {}
 
     @Environment(ScanCoordinator.self) private var scan
     @Environment(APIKeys.self) private var keys
     @Environment(Connectivity.self) private var connectivity
-    @Environment(\.isActiveApp) private var isActiveApp
     @Environment(\.openURL) private var openURL
     @Query private var sightings: [Sighting]
 
@@ -28,9 +32,6 @@ struct CaptureView: View {
     @State private var isCapturing = false
     @State private var toast: String?
     @State private var flash = false
-    /// This tab is the one showing in Faune & Flore. Hiding the whole app
-    /// doesn't make it disappear, so the two are tracked apart.
-    @State private var onScreen = false
 
     private var pendingCount: Int {
         sightings.filter { $0.status != .complete && $0.status != .needsReview }.count
@@ -56,9 +57,14 @@ struct CaptureView: View {
         }
         .background(Color.black)
         .toolbarBackground(.visible, for: .tabBar)
-        .task {
-            onScreen = true
-            scan.cameraOnScreen = true
+        // Runs again whenever the screen is shown or hidden, including when
+        // Cuisine or Savoirs is opened on top of it.
+        .task(id: isVisible) {
+            guard isVisible else {
+                camera.stop()
+                location.stopWarmingUp()
+                return
+            }
             _ = await camera.requestAccess()
             location.startWarmingUp()
             camera.configure()
@@ -68,23 +74,8 @@ struct CaptureView: View {
             Task { await scan.processQueue() }
         }
         .onDisappear {
-            onScreen = false
-            scan.cameraOnScreen = false
             camera.stop()
             location.stopWarmingUp()
-        }
-        // Switching to Cuisine or Savoirs keeps this screen alive but hidden:
-        // the camera and the GPS stop with it.
-        .onChange(of: isActiveApp) { _, active in
-            guard onScreen else { return }
-            scan.cameraOnScreen = active
-            if active {
-                camera.start()
-                location.startWarmingUp()
-            } else {
-                camera.stop()
-                location.stopWarmingUp()
-            }
         }
     }
 

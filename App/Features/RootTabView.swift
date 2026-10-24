@@ -350,9 +350,15 @@ private struct AppSwitcherBar: View {
 
 /// The field companion: collection, capture, map.
 private struct NatureTabs: View {
+    @Environment(ScanCoordinator.self) private var scan
+    @Environment(\.isActiveApp) private var isActiveApp
+
     @State private var tab: NatureTab
     /// Where the shutter sends the user back to once the photo is saved.
     @State private var beforeCapture: NatureTab = .faune
+
+    /// The camera is in front of the user, which only the tab bar knows.
+    private var cameraVisible: Bool { tab == .capture && isActiveApp }
 
     init(start: NatureTab) {
         _tab = State(initialValue: start)
@@ -366,7 +372,7 @@ private struct NatureTabs: View {
             DexView(realm: .plant)
                 .tabItem { Label("Flore", systemImage: "leaf.fill") }
                 .tag(NatureTab.flore)
-            CaptureView(onCaptured: { tab = beforeCapture })
+            CaptureView(isVisible: cameraVisible, onCaptured: { tab = beforeCapture })
                 .tabItem { Label("Capturer", systemImage: "camera.fill") }
                 .tag(NatureTab.capture)
             SightingsMapView()
@@ -379,6 +385,9 @@ private struct NatureTabs: View {
         .tint(Theme.brand)
         .onChange(of: tab) { old, new in
             if new == .capture && old != .capture { beforeCapture = old }
+        }
+        .onChange(of: cameraVisible, initial: true) { _, visible in
+            scan.cameraOnScreen = visible
         }
     }
 }
