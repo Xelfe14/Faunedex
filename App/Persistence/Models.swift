@@ -317,8 +317,13 @@ final class Recipe {
 final class KnowledgeCard {
     var id: UUID = UUID()
     var title: String = ""
+    /// The `key` of the card's `KnowledgeCategory`. Named for the fixed themes
+    /// it first held, and kept so, since renaming a stored property would
+    /// change the iCloud schema.
     var themeRaw: String = KnowledgeTheme.divers.rawValue
     var summaryFR: String?
+    /// Where the word comes from: always there for a word to define.
+    var etymologyFR: String?
     var bodyFR: String = ""
     var keyPoints: [String] = []
     var question: String?
@@ -378,9 +383,9 @@ final class KnowledgeCard {
         get { Source(rawValue: sourceRaw) ?? .gemini }
         set { sourceRaw = newValue.rawValue }
     }
-    var theme: KnowledgeTheme {
-        get { KnowledgeTheme(rawValue: themeRaw) ?? .divers }
-        set { themeRaw = newValue.rawValue }
+    var categoryKey: String {
+        get { themeRaw }
+        set { themeRaw = newValue }
     }
     var articleURL: URL? { articleURLString.flatMap(URL.init(string:)) }
 
@@ -417,19 +422,21 @@ final class KnowledgeCard {
 
     // MARK: Bridging to the pure value type
 
+    /// The card's content. The category is left out: it is a key here, and
+    /// whoever needs its name looks it up.
     var draft: KnowledgeDraft {
-        KnowledgeDraft(title: title, theme: theme, summaryFR: summaryFR, bodyFR: bodyFR,
+        KnowledgeDraft(title: title, summaryFR: summaryFR, etymologyFR: etymologyFR, bodyFR: bodyFR,
                        keyPointsFR: keyPoints, questionFR: question, answerFR: answer,
                        funFactFR: funFactFR, wikipediaQuery: wikipediaQuery, tags: tags)
     }
 
-    /// Overwrite the card's content from a draft, leaving the learner's layer
-    /// (notes, favourite, review history, picture) untouched.
+    /// Overwrite the card's content from a draft, leaving its category and the
+    /// learner's layer (notes, favourite, review history, picture) untouched.
     func apply(_ raw: KnowledgeDraft) {
         let draft = raw.normalized()
         title = draft.title
-        theme = draft.theme
         summaryFR = draft.summaryFR
+        etymologyFR = draft.etymologyFR
         bodyFR = draft.bodyFR
         keyPoints = draft.keyPointsFR
         question = draft.questionFR
@@ -438,5 +445,28 @@ final class KnowledgeCard {
         if let query = draft.wikipediaQuery { wikipediaQuery = query }
         tags = draft.tags
         updatedAt = .now
+    }
+}
+
+/// A shelf of the Savoirs collection, which the learner names, decorates and
+/// orders as they like.
+///
+/// Cards point to it by `key`, never by name, so renaming a category moves no
+/// card. The first eleven are created from `KnowledgeTheme` with its raw values
+/// as keys, which is also how a copy created on a second device before iCloud
+/// caught up is recognised and merged; the learner's own get a UUID.
+@Model
+final class KnowledgeCategory {
+    var key: String = ""
+    var name: String = ""
+    var symbolName: String = "lightbulb"
+    var sortIndex: Int = 0
+    var createdAt: Date = Date.now
+
+    init(key: String, name: String, symbolName: String, sortIndex: Int) {
+        self.key = key
+        self.name = name
+        self.symbolName = symbolName
+        self.sortIndex = sortIndex
     }
 }

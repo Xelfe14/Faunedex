@@ -10,6 +10,7 @@ import FlaunedexCore
 /// collection without touching the schedule.
 struct KnowledgeReviewView: View {
     @Query(sort: \KnowledgeCard.createdAt) private var cards: [KnowledgeCard]
+    @Query private var categories: [KnowledgeCategory]
     @Environment(KnowledgeStore.self) private var store
 
     /// Card ids still to show, in order. Empty and not started: the overview.
@@ -155,8 +156,8 @@ struct KnowledgeReviewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(spacing: 6) {
-                        Image(systemName: card.theme.symbolName)
-                        Text(card.theme.frenchLabel)
+                        Image(systemName: CategoryIndex(categories).symbol(for: card.categoryKey))
+                        Text(CategoryIndex(categories).name(for: card.categoryKey))
                         Spacer()
                         ReviewBoxMeter(box: card.reviewBox)
                     }
@@ -172,6 +173,17 @@ struct KnowledgeReviewView: View {
                         Text(card.reviewAnswer)
                             .font(.body)
                             .fixedSize(horizontal: false, vertical: true)
+                        if let etymology = card.etymologyFR {
+                            Label {
+                                Text(etymology)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            } icon: {
+                                Image(systemName: "text.book.closed")
+                                    .foregroundStyle(Theme.savoirs)
+                            }
+                        }
                         if !card.keyPoints.isEmpty {
                             VStack(alignment: .leading, spacing: 6) {
                                 ForEach(Array(card.keyPoints.enumerated()), id: \.offset) { _, point in

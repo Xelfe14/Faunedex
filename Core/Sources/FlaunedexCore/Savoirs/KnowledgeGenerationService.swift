@@ -49,7 +49,7 @@ public struct KnowledgeGenerationService: Sendable {
             ])),
             ("generationConfig", .obj([
                 ("responseMimeType", .str("application/json")),
-                ("responseSchema", KnowledgeSchema.responseSchema),
+                ("responseSchema", KnowledgeSchema.responseSchema(categories: request.categories)),
                 // No temperature, as everywhere else: Gemini 3 is meant to run
                 // at its default and can loop below it.
                 ("thinkingConfig", .obj([("thinkingLevel", .str(thinkingLevel.rawValue))])),
@@ -131,12 +131,13 @@ public struct KnowledgeGenerationService: Sendable {
     }
 }
 
-/// The raw shape Gemini returns, decoded leniently: every field optional, and
-/// a theme outside the list filed under Divers rather than failing the card.
+/// The raw shape Gemini returns, decoded leniently: every field optional, so a
+/// card with a gap still arrives. The category is matched by the app.
 struct GeneratedKnowledge: Decodable {
     let title: String?
     let theme: String?
     let summaryFR: String?
+    let etymologyFR: String?
     let bodyFR: String?
     let keyPointsFR: [String]?
     let questionFR: String?
@@ -148,6 +149,7 @@ struct GeneratedKnowledge: Decodable {
     enum CodingKeys: String, CodingKey {
         case title, theme, tags
         case summaryFR = "summary_fr"
+        case etymologyFR = "etymology_fr"
         case bodyFR = "body_fr"
         case keyPointsFR = "key_points_fr"
         case questionFR = "question_fr"
@@ -160,8 +162,9 @@ struct GeneratedKnowledge: Decodable {
         let cleanTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return KnowledgeDraft(
             title: cleanTitle.isEmpty ? "Fiche" : cleanTitle,
-            theme: KnowledgeTheme.resolve(theme),
+            category: theme,
             summaryFR: summaryFR,
+            etymologyFR: etymologyFR,
             bodyFR: bodyFR ?? "",
             keyPointsFR: keyPointsFR ?? [],
             questionFR: questionFR,

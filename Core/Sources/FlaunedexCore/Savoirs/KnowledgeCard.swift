@@ -1,7 +1,8 @@
 import Foundation
 
-/// The shelf a knowledge card sits on. French raw values, because they are what
-/// the model is asked to produce and what the UI displays, as for recipes.
+/// The shelves a new collection starts with. The learner can rename them,
+/// change their icon, delete them or add their own; the raw values stay as
+/// the stable keys of these first eleven.
 public enum KnowledgeTheme: String, Codable, Sendable, CaseIterable, Hashable {
     case sciences
     case histoire
@@ -79,9 +80,13 @@ public enum KnowledgeDepth: String, Codable, Sendable, CaseIterable, Hashable {
 /// testable with `swift test`.
 public struct KnowledgeDraft: Codable, Sendable, Equatable {
     public var title: String
-    public var theme: KnowledgeTheme
-    /// The one sentence to remember.
+    /// The category the model chose, by name, among those it was offered.
+    /// The app matches it to one of the learner's categories.
+    public var category: String?
+    /// The one sentence to remember; for a word, its definition.
     public var summaryFR: String?
+    /// Where the word comes from. Always there for a word or an expression.
+    public var etymologyFR: String?
     /// The explanation, in short paragraphs separated by a blank line.
     public var bodyFR: String
     public var keyPointsFR: [String]
@@ -94,13 +99,14 @@ public struct KnowledgeDraft: Codable, Sendable, Equatable {
     public var wikipediaQuery: String?
     public var tags: [String]
 
-    public init(title: String, theme: KnowledgeTheme = .divers, summaryFR: String? = nil,
-                bodyFR: String = "", keyPointsFR: [String] = [], questionFR: String? = nil,
-                answerFR: String? = nil, funFactFR: String? = nil, wikipediaQuery: String? = nil,
-                tags: [String] = []) {
+    public init(title: String, category: String? = nil, summaryFR: String? = nil,
+                etymologyFR: String? = nil, bodyFR: String = "", keyPointsFR: [String] = [],
+                questionFR: String? = nil, answerFR: String? = nil, funFactFR: String? = nil,
+                wikipediaQuery: String? = nil, tags: [String] = []) {
         self.title = title
-        self.theme = theme
+        self.category = category
         self.summaryFR = summaryFR
+        self.etymologyFR = etymologyFR
         self.bodyFR = bodyFR
         self.keyPointsFR = keyPointsFR
         self.questionFR = questionFR
@@ -113,7 +119,9 @@ public struct KnowledgeDraft: Codable, Sendable, Equatable {
     public func normalized() -> KnowledgeDraft {
         var copy = self
         copy.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.category = Self.cleaned(category)
         copy.summaryFR = Self.cleaned(summaryFR)
+        copy.etymologyFR = Self.cleaned(etymologyFR)
         copy.bodyFR = Self.paragraphs(bodyFR)
         copy.keyPointsFR = RecipeDraft.uniqueTrimmed(keyPointsFR.map(Self.withoutBullet))
         copy.questionFR = Self.cleaned(questionFR)
@@ -170,10 +178,49 @@ public struct KnowledgeRequest: Sendable, Equatable {
     public var depth: KnowledgeDepth
     /// An angle to insist on: "les dates clés", "expliqué à un enfant".
     public var focus: String?
+    /// The learner's category names, offered to the model to file the card.
+    public var categories: [String]
 
-    public init(subject: String, depth: KnowledgeDepth = .essentiel, focus: String? = nil) {
+    public init(subject: String, depth: KnowledgeDepth = .essentiel, focus: String? = nil,
+                categories: [String] = []) {
         self.subject = subject
         self.depth = depth
         self.focus = focus
+        self.categories = categories
+    }
+
+    /// The subject is a word or an expression to define, rather than a
+    /// question or a topic: "sérendipité", "la définition de procrastiner",
+    /// "que veut dire « tergiverser »". Such a card always gets its etymology.
+    public var asksForDefinition: Bool {
+        let s = KnowledgeCategoryMatch.fold(subject)
+        let markers = ["definition", "defini", "que veut dire", "que signifie", "veut dire", "signifie",
+                       "signification", "sens du mot", "sens de l'expression", "le mot ", "l'expression",
+                       "etymologie", "origine du mot"]
+        if markers.contains(where: { s.contains($0) }) { return true }
+        if s.hasPrefix("«") || s.hasPrefix("\"") { return true }
+        let articles: Set<String> = ["le", "la", "les", "l", "un", "une", "des", "du", "de", "d"]
+        let words = s.split(whereSeparator: { $0 == " " || $0 == "'" || $0 == "’" })
+            .map(String.init)
+            .filter { !articles.contains($0) }
+        return words.count == 1
+    }
+}
+
+/// Matching the category name a model wrote to one the learner has, however
+/// it was capitalised or accented.
+public enum KnowledgeCategoryMatch {
+    /// The position in `names` of the category `answer` designates, if any.
+    public static func index(of answer: String?, in names: [String]) -> Int? {
+        guard let answer else { return nil }
+        let key = fold(answer)
+        guard !key.isEmpty else { return nil }
+        return names.firstIndex { fold($0) == key }
+    }
+
+    /// Lower case, no accents, trimmed: the form two names are compared in.
+    public static func fold(_ s: String) -> String {
+        s.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "fr_FR"))
     }
 }

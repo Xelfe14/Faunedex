@@ -4,16 +4,65 @@ import Foundation
 
 struct KnowledgeSchemaTests {
 
-    private func schemaRoot() throws -> [String: Any] {
-        let schema = try JSONSerialization.jsonObject(with: KnowledgeSchema.responseSchema.encoded())
+    private func schemaRoot(categories: [String] = ["Sciences", "Histoire"]) throws -> [String: Any] {
+        let schema = try JSONSerialization.jsonObject(
+            with: KnowledgeSchema.responseSchema(categories: categories).encoded())
         return try #require(schema as? [String: Any])
     }
 
-    @Test func themesOfferedToTheModelAreExactlyTheAppsShelves() throws {
-        let properties = try #require(try schemaRoot()["properties"] as? [String: Any])
+    @Test func theModelIsOfferedExactlyTheLearnersCategories() throws {
+        let mine = ["Sciences", "Mots rares", "Arts & culture"]
+        let properties = try #require(try schemaRoot(categories: mine)["properties"] as? [String: Any])
         let theme = try #require(properties["theme"] as? [String: Any])
-        let allowed = try #require(theme["enum"] as? [String])
-        #expect(allowed == KnowledgeTheme.allCases.map(\.rawValue))
+        #expect(theme["enum"] as? [String] == mine)
+    }
+
+    @Test func withNoCategoriesTheThemeIsFreeText() throws {
+        let properties = try #require(try schemaRoot(categories: [])["properties"] as? [String: Any])
+        let theme = try #require(properties["theme"] as? [String: Any])
+        #expect(theme["enum"] == nil)
+        #expect(theme["type"] as? String == "string")
+    }
+
+    @Test func etymologyFollowsTheDefinitionAndIsAlwaysAsked() throws {
+        let ordering = try #require(try schemaRoot()["propertyOrdering"] as? [String])
+        let summary = try #require(ordering.firstIndex(of: "summary_fr"))
+        let etymology = try #require(ordering.firstIndex(of: "etymology_fr"))
+        #expect(etymology == summary + 1)
+        #expect(KnowledgeSchema.systemPrompt.contains("OBLIGATOIRE quand le sujet est un mot"))
+    }
+
+    @Test func wordsAndDefinitionRequestsAreRecognised() {
+        for subject in ["sérendipité", "la procrastination", "Définition de tergiverser",
+                        "que veut dire « ubuesque » ?", "le mot palimpseste", "« faire florès »",
+                        "l'étymologie de salaire"] {
+            #expect(KnowledgeRequest(subject: subject).asksForDefinition, "\(subject)")
+        }
+        for subject in ["pourquoi le ciel est bleu", "la bataille de Marignan", "comment fonctionne un vaccin"] {
+            #expect(!KnowledgeRequest(subject: subject).asksForDefinition, "\(subject)")
+        }
+    }
+
+    @Test func aDefinitionRequestDemandsTheEtymology() {
+        let word = KnowledgeSchema.userInstruction(request: KnowledgeRequest(subject: "sérendipité"))
+        #expect(word.contains("« etymology_fr » est obligatoire"))
+        let topic = KnowledgeSchema.userInstruction(request: KnowledgeRequest(subject: "pourquoi le ciel est bleu"))
+        #expect(!topic.contains("« etymology_fr » est obligatoire"))
+    }
+
+    @Test func aCategoryNameIsMatchedWhateverItsCaseOrAccents() {
+        let names = ["Sciences", "Géographie", "Santé", "Mots rares"]
+        #expect(KnowledgeCategoryMatch.index(of: "geographie", in: names) == 1)
+        #expect(KnowledgeCategoryMatch.index(of: " SANTE ", in: names) == 2)
+        #expect(KnowledgeCategoryMatch.index(of: "mots rares", in: names) == 3)
+        #expect(KnowledgeCategoryMatch.index(of: "astrologie", in: names) == nil)
+        #expect(KnowledgeCategoryMatch.index(of: nil, in: names) == nil)
+    }
+
+    @Test func theFirstShelvesAreFoundByKeyOrLabel() {
+        #expect(KnowledgeTheme.resolve("Géographie") == .geographie)
+        #expect(KnowledgeTheme.resolve("SANTE") == .sante)
+        #expect(KnowledgeTheme.resolve("astrologie") == .divers)
     }
 
     @Test func titleComesFirstAndTheFlashcardAfterTheExplanation() throws {
@@ -52,6 +101,7 @@ struct KnowledgeSchemaTests {
         let text = KnowledgeSchema.render(KnowledgeCardFixtures.photosynthesis)
         #expect(text.hasPrefix("Titre : Photosynthèse"))
         #expect(text.contains("Rubrique : Sciences"))
+        #expect(text.contains("Étymologie : Du grec"))
         #expect(text.contains("- Elle a lieu dans les chloroplastes."))
         #expect(text.contains("Question : "))
         #expect(text.contains("Réponse : "))
@@ -115,6 +165,7 @@ struct KnowledgeParsingTests {
             "title": "Photosynthèse",
             "theme": "sciences",
             "summary_fr": "Les plantes fabriquent leur matière avec la lumière.",
+            "etymology_fr": "Du grec phôs, « lumière », et sunthesis, « composition ».",
             "body_fr": "Premier paragraphe.\n\n\n\nDeuxième paragraphe.  ",
             "key_points_fr": ["- Elle a lieu dans les chloroplastes.", "2. Elle libère du dioxygène.", " ", "1.5 milliard d'années d'histoire"],
             "question_fr": "Quel gaz la photosynthèse libère-t-elle ?",
@@ -128,7 +179,8 @@ struct KnowledgeParsingTests {
     @Test func decodesAWellFormedCard() throws {
         let draft = try KnowledgeGenerationService.parseResponse(try envelope(wellFormed))
         #expect(draft.title == "Photosynthèse")
-        #expect(draft.theme == .sciences)
+        #expect(draft.category == "sciences")
+        #expect(draft.etymologyFR?.hasPrefix("Du grec") == true)
         #expect(draft.answerFR == "Du dioxygène.")
         #expect(draft.funFactFR == nil)
         #expect(draft.wikipediaQuery == "Photosynthèse")
@@ -145,20 +197,30 @@ struct KnowledgeParsingTests {
         #expect(draft.tags == ["biologie", "plantes"])
     }
 
-    @Test func anUnknownThemeIsFiledUnderDiversAndALabelIsUnderstood() throws {
+    @Test func aBlankCategoryOrEtymologyIsDropped() throws {
         var card = wellFormed
-        card["theme"] = "astrologie"
-        #expect(try KnowledgeGenerationService.parseResponse(try envelope(card)).theme == .divers)
-        card["theme"] = "Géographie"
-        #expect(try KnowledgeGenerationService.parseResponse(try envelope(card)).theme == .geographie)
-        card["theme"] = "SANTE"
-        #expect(try KnowledgeGenerationService.parseResponse(try envelope(card)).theme == .sante)
+        card["theme"] = "  "
+        card["etymology_fr"] = NSNull()
+        let draft = try KnowledgeGenerationService.parseResponse(try envelope(card))
+        #expect(draft.category == nil)
+        #expect(draft.etymologyFR == nil)
+    }
+
+    @Test func theRequestCarriesTheCategoriesIntoTheSchema() throws {
+        let body = KnowledgeGenerationService.requestBody(
+            request: KnowledgeRequest(subject: "x", categories: ["Mots rares"]))
+        let object = try #require(try JSONSerialization.jsonObject(with: body.encoded()) as? [String: Any])
+        let generation = try #require(object["generationConfig"] as? [String: Any])
+        let schema = try #require(generation["responseSchema"] as? [String: Any])
+        let properties = try #require(schema["properties"] as? [String: Any])
+        let theme = try #require(properties["theme"] as? [String: Any])
+        #expect(theme["enum"] as? [String] == ["Mots rares"])
     }
 
     @Test func aCardWithMissingFieldsStillArrives() throws {
         let draft = try KnowledgeGenerationService.parsePayload(Data(#"{"body_fr":"Texte."}"#.utf8))
         #expect(draft.title == "Fiche")
-        #expect(draft.theme == .divers)
+        #expect(draft.category == nil)
         #expect(draft.bodyFR == "Texte.")
         #expect(draft.keyPointsFR.isEmpty)
     }
@@ -250,8 +312,9 @@ struct ReviewSchedulerTests {
 enum KnowledgeCardFixtures {
     static let photosynthesis = KnowledgeDraft(
         title: "Photosynthèse",
-        theme: .sciences,
+        category: "Sciences",
         summaryFR: "Les plantes fabriquent leur matière à partir de lumière, d'eau et de CO₂.",
+        etymologyFR: "Du grec phôs, « lumière », et sunthesis, « composition ».",
         bodyFR: "La photosynthèse transforme l'énergie lumineuse en énergie chimique.",
         keyPointsFR: ["Elle a lieu dans les chloroplastes.", "Elle libère du dioxygène."],
         questionFR: "Quel gaz la photosynthèse libère-t-elle ?",

@@ -88,7 +88,6 @@ struct RootTabView: View {
     @Query(sort: \Species.dexNumber) private var previewSpecies: [Species]
     @Query(sort: \Recipe.sortIndex) private var previewRecipes: [Recipe]
     @Query(sort: \KnowledgeCard.createdAt, order: .reverse) private var previewCards: [KnowledgeCard]
-    @Query(sort: \Sighting.capturedAt) private var previewSightings: [Sighting]
 
     private static let previewApps: [String: AppSection] = [
         "nature": .nature, "pastille": .nature,
@@ -136,7 +135,8 @@ struct RootTabView: View {
                         let scan = ScanCoordinator(context: context, keys: keys)
                         #if DEBUG
                         if previewScreen == "pastille" {
-                            scan.lastCapture = previewSightings.first { $0.status == .complete && $0.hasCoordinate }
+                            let sightings = (try? context.fetch(FetchDescriptor<Sighting>())) ?? []
+                            scan.lastCapture = sightings.first { $0.status == .complete && $0.hasCoordinate }
                         }
                         #endif
                         self.scan = scan
@@ -257,6 +257,8 @@ struct RootTabView: View {
                 }
             }
         case "fiches": NavigationStack { KnowledgeListView() }
+        case "rubriques": KnowledgeCategoriesView()
+        case "nouvelle-rubrique": CategoryEditorView(category: nil)
         case "apprendre": NavigationStack { KnowledgeAskView() }
         case "fiche":
             if let card = previewCards.first(where: { $0.title == "Photosynthèse" }) ?? previewCards.first {

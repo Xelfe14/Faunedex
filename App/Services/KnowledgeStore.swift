@@ -24,7 +24,12 @@ final class KnowledgeStore {
     init(context: ModelContext, keys: APIKeys) {
         self.context = context
         self.keys = keys
+        ensureCategories()
     }
+
+    /// Where a card goes when it has no category, and where the cards of a
+    /// deleted category move to.
+    nonisolated static let fallbackKey = KnowledgeTheme.divers.rawValue
 
     var hasGeminiKey: Bool { keys.hasGeminiKey }
 
@@ -42,14 +47,18 @@ final class KnowledgeStore {
 
     // MARK: Asking for a card
 
-    /// Ask for a new card and store it. The picture is fetched afterwards and
-    /// never blocks the result.
+    /// Ask for a new card and store it, in `categoryKey` if the learner chose
+    /// one, otherwise in whichever of their categories the model picks. The
+    /// picture is fetched afterwards and never blocks the result.
     @discardableResult
-    func generate(request: KnowledgeRequest) async throws -> KnowledgeCard {
+    func generate(request: KnowledgeRequest, categoryKey: String? = nil) async throws -> KnowledgeCard {
         guard keys.hasGeminiKey else { throw KnowledgeError.noKey }
         isWorking = true
         defer { isWorking = false }
 
+        let categories = allCategories()
+        var request = request
+        request.categories = categories.map(\.name)
         let draft: KnowledgeDraft
         do {
             draft = try await generator.generate(request: request, apiKey: keys.geminiKey)
@@ -59,6 +68,9 @@ final class KnowledgeStore {
 
         let card = KnowledgeCard(title: draft.title, source: .gemini)
         card.apply(draft)
+        card.categoryKey = categoryKey
+            ?? KnowledgeCategoryMatch.index(of: draft.category, in: request.categories).map { categories[$0].key }
+            ?? Self.fallbackKey
         card.originalPrompt = request.subject
         context.insert(card)
         save()
@@ -67,18 +79,21 @@ final class KnowledgeStore {
         return card
     }
 
-    /// Ask for a change to a card that already exists. Its review history is
-    /// kept: rewording a card doesn't make it unknown.
+    /// Ask for a change to a card that already exists. Its category and its
+    /// review history are kept: rewording a card doesn't make it unknown, nor
+    /// move it off the shelf the learner put it on.
     func revise(_ card: KnowledgeCard, change: String) async throws {
         guard keys.hasGeminiKey else { throw KnowledgeError.noKey }
         isWorking = true
         defer { isWorking = false }
 
+        var current = card.draft
+        current.category = category(forKey: card.categoryKey)?.name
         do {
             let draft = try await generator.generate(
                 request: KnowledgeRequest(subject: card.title),
                 apiKey: keys.geminiKey,
-                revision: .init(existingText: KnowledgeSchema.render(card.draft), change: change),
+                revision: .init(existingText: KnowledgeSchema.render(current), change: change),
                 thinkingLevel: .high
             )
             let hadPicture = card.imageURLString != nil
@@ -97,17 +112,18 @@ final class KnowledgeStore {
     /// A card the learner wrote themselves, with no model involved. Only
     /// created once they save, so an abandoned editor leaves nothing behind.
     @discardableResult
-    func create(_ draft: KnowledgeDraft, notes: String) -> KnowledgeCard {
+    func create(_ draft: KnowledgeDraft, categoryKey: String, notes: String) -> KnowledgeCard {
         let card = KnowledgeCard(title: draft.title, source: .manual)
         context.insert(card)
-        applyEdit(draft, notes: notes, to: card)
+        applyEdit(draft, categoryKey: categoryKey, notes: notes, to: card)
         return card
     }
 
     /// Replace the card's content with what the learner typed. A card the
     /// model wrote is re-marked as edited, so it never again claims otherwise.
-    func applyEdit(_ draft: KnowledgeDraft, notes: String, to card: KnowledgeCard) {
+    func applyEdit(_ draft: KnowledgeDraft, categoryKey: String, notes: String, to card: KnowledgeCard) {
         card.apply(draft)
+        card.categoryKey = categoryKey
         if draft.wikipediaQuery == nil { card.wikipediaQuery = nil }
         let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         card.notes = trimmed.isEmpty ? nil : trimmed
@@ -130,6 +146,100 @@ final class KnowledgeStore {
     func delete(_ card: KnowledgeCard) {
         if let path = card.localImagePath { images.delete(path) }
         context.delete(card)
+        save()
+    }
+
+    // MARK: Categories
+
+    func allCategories() -> [KnowledgeCategory] {
+        let all = (try? context.fetch(FetchDescriptor<KnowledgeCategory>())) ?? []
+        return all.sorted { ($0.sortIndex, $0.createdAt) < ($1.sortIndex, $1.createdAt) }
+    }
+
+    func category(forKey key: String) -> KnowledgeCategory? {
+        allCategories().first { $0.key == key }
+    }
+
+    /// Start a new collection with the eleven first categories, and merge the
+    /// copies of a category that iCloud may bring from another device.
+    ///
+    /// Only an empty collection is seeded, so a category the learner deleted
+    /// stays deleted. Divers is always kept, as the place cards fall back to.
+    func ensureCategories() {
+        let all = ((try? context.fetch(FetchDescriptor<KnowledgeCategory>())) ?? [])
+            .sorted { $0.createdAt < $1.createdAt }
+        if all.isEmpty {
+            for (index, theme) in KnowledgeTheme.allCases.enumerated() {
+                context.insert(KnowledgeCategory(key: theme.rawValue, name: theme.frenchLabel,
+                                                 symbolName: theme.symbolName, sortIndex: index))
+            }
+            save()
+            return
+        }
+        var seen = Set<String>()
+        for category in all {
+            if seen.contains(category.key) {
+                context.delete(category)
+            } else {
+                seen.insert(category.key)
+            }
+        }
+        if !seen.contains(Self.fallbackKey) {
+            let divers = KnowledgeTheme.divers
+            context.insert(KnowledgeCategory(key: Self.fallbackKey, name: divers.frenchLabel,
+                                             symbolName: divers.symbolName,
+                                             sortIndex: (all.map(\.sortIndex).max() ?? 0) + 1))
+        }
+        save()
+    }
+
+    /// A new category, last in the list. A name already in use returns that
+    /// category instead of making a twin.
+    @discardableResult
+    func createCategory(name: String, symbolName: String) -> KnowledgeCategory? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let existing = allCategories()
+        if let index = KnowledgeCategoryMatch.index(of: trimmed, in: existing.map(\.name)) {
+            return existing[index]
+        }
+        let category = KnowledgeCategory(key: UUID().uuidString, name: trimmed, symbolName: symbolName,
+                                         sortIndex: (existing.map(\.sortIndex).max() ?? -1) + 1)
+        context.insert(category)
+        save()
+        return category
+    }
+
+    func updateCategory(_ category: KnowledgeCategory, name: String, symbolName: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { category.name = trimmed }
+        category.symbolName = symbolName
+        save()
+    }
+
+    /// Delete a category; its cards move to Divers rather than disappearing.
+    func deleteCategory(_ category: KnowledgeCategory) {
+        guard category.key != Self.fallbackKey else { return }
+        let key = category.key
+        let cards = (try? context.fetch(FetchDescriptor<KnowledgeCard>(
+            predicate: #Predicate { $0.themeRaw == key }))) ?? []
+        for card in cards { card.categoryKey = Self.fallbackKey }
+        context.delete(category)
+        save()
+    }
+
+    /// Persist an order arranged by hand.
+    func persistCategoryOrder(_ ordered: [KnowledgeCategory]) {
+        for (index, category) in ordered.enumerated() where category.sortIndex != index {
+            category.sortIndex = index
+        }
+        save()
+    }
+
+    /// Move one card to another shelf.
+    func setCategory(_ key: String, for card: KnowledgeCard) {
+        card.categoryKey = key
+        card.updatedAt = .now
         save()
     }
 

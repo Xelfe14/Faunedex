@@ -2,9 +2,40 @@ import SwiftUI
 import UIKit
 import FlaunedexCore
 
+/// The learner's categories, in their order, looked up by key.
+///
+/// A card whose category is gone (deleted on another device before iCloud
+/// moved its cards) is shown under Divers rather than lost.
+struct CategoryIndex {
+    let ordered: [KnowledgeCategory]
+    private let byKey: [String: KnowledgeCategory]
+
+    init(_ categories: [KnowledgeCategory]) {
+        ordered = categories.sorted { ($0.sortIndex, $0.createdAt) < ($1.sortIndex, $1.createdAt) }
+        var map: [String: KnowledgeCategory] = [:]
+        for category in ordered where map[category.key] == nil { map[category.key] = category }
+        byKey = map
+    }
+
+    /// The key a card is shelved under.
+    func shelfKey(for key: String) -> String {
+        byKey[key] != nil ? key : KnowledgeTheme.divers.rawValue
+    }
+
+    func name(for key: String) -> String {
+        byKey[shelfKey(for: key)]?.name ?? KnowledgeTheme.divers.frenchLabel
+    }
+
+    func symbol(for key: String) -> String {
+        byKey[shelfKey(for: key)]?.symbolName ?? KnowledgeTheme.divers.symbolName
+    }
+}
+
 /// The card's picture, preferring the copy cached on disk, as recipes do.
 struct KnowledgeImage: View {
     let card: KnowledgeCard
+    /// Drawn when there is no picture: the category's icon.
+    var symbol = "lightbulb"
 
     @Environment(KnowledgeStore.self) private var store
     @State private var local: UIImage?
@@ -15,7 +46,7 @@ struct KnowledgeImage: View {
                 Image(uiImage: local).resizable().aspectRatio(contentMode: .fill)
             } else {
                 RemoteImage(urlString: card.thumbURLString ?? card.imageURLString,
-                            symbol: card.theme.symbolName, tint: Theme.savoirs)
+                            symbol: symbol, tint: Theme.savoirs)
             }
         }
         .task(id: card.localImagePath) {
@@ -32,10 +63,11 @@ struct KnowledgeImage: View {
 /// where the card stands in the review cycle.
 struct KnowledgeRow: View {
     let card: KnowledgeCard
+    var symbol = "lightbulb"
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            KnowledgeImage(card: card)
+            KnowledgeImage(card: card, symbol: symbol)
                 .frame(width: 58, height: 58)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {

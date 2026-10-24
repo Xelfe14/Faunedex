@@ -10,6 +10,8 @@ struct KnowledgeAskView: View {
     @State private var subject: String
     @State private var depth: KnowledgeDepth = .essentiel
     @State private var focus = ""
+    /// Nil leaves the choice to Gemini, among the learner's categories.
+    @State private var categoryKey: String?
     @State private var created: KnowledgeCard?
     @State private var writing = false
     @State private var errorMessage: String?
@@ -18,6 +20,7 @@ struct KnowledgeAskView: View {
 
     /// Starting points, so the screen is never a blank box.
     private let ideas = [
+        "sérendipité",
         "pourquoi le ciel est bleu",
         "la photosynthèse",
         "la bataille de Marignan",
@@ -82,9 +85,18 @@ struct KnowledgeAskView: View {
             } header: {
                 Text("La fiche")
             } footer: {
-                Text(depth == .essentiel
-                     ? "Deux paragraphes courts, les points à retenir et une question de révision."
-                     : "Quatre ou cinq paragraphes avec les nuances, les points à retenir et une question de révision.")
+                Text((depth == .essentiel
+                      ? "Deux paragraphes courts, les points à retenir et une question de révision."
+                      : "Quatre ou cinq paragraphes avec les nuances, les points à retenir et une question de révision.")
+                     + " Pour un mot, sa définition et toujours son étymologie.")
+            }
+
+            Section {
+                CategoryPicker(selection: $categoryKey, allowsAutomatic: true)
+            } footer: {
+                Text(categoryKey == nil
+                     ? "Gemini range la fiche dans celle de vos rubriques qui convient le mieux."
+                     : "La fiche sera rangée dans cette rubrique.")
             }
 
             Section {
@@ -141,7 +153,7 @@ struct KnowledgeAskView: View {
         )
         Task {
             do {
-                created = try await store.generate(request: request)
+                created = try await store.generate(request: request, categoryKey: categoryKey)
                 subject = ""
                 focus = ""
             } catch {

@@ -10,6 +10,8 @@ struct KnowledgeCardView: View {
     @Environment(KnowledgeStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
+    @Query private var categories: [KnowledgeCategory]
+
     @State private var showsAnswer = false
     @State private var noteDraft = ""
     @State private var editing = false
@@ -21,6 +23,7 @@ struct KnowledgeCardView: View {
         List {
             heroSection
             headerSection
+            if let etymology = card.etymologyFR { etymologySection(etymology) }
             if !card.bodyFR.isEmpty { bodySection }
             if !card.keyPoints.isEmpty { keyPointsSection }
             flashcardSection
@@ -65,7 +68,7 @@ struct KnowledgeCardView: View {
     @ViewBuilder private var heroSection: some View {
         if card.imageURLString != nil || card.localImagePath != nil {
             Section {
-                KnowledgeImage(card: card)
+                KnowledgeImage(card: card, symbol: CategoryIndex(categories).symbol(for: card.categoryKey))
                     .frame(height: 200)
                     .frame(maxWidth: .infinity)
                     .clipped()
@@ -80,7 +83,7 @@ struct KnowledgeCardView: View {
                 Text(card.title.isEmpty ? "Sans titre" : card.title)
                     .font(Theme.display(24))
                 HStack(spacing: 6) {
-                    Chip(text: card.theme.frenchLabel, systemImage: card.theme.symbolName, tint: Theme.savoirs)
+                    categoryMenu
                     Chip(text: card.source.frenchLabel, systemImage: card.source.symbolName, tint: .secondary)
                 }
                 if let summary = card.summaryFR {
@@ -95,6 +98,44 @@ struct KnowledgeCardView: View {
                 }
             }
             .padding(.vertical, 4)
+        }
+    }
+
+    /// The category chip doubles as the way to move the card to another one.
+    private var categoryMenu: some View {
+        let index = CategoryIndex(categories)
+        return Menu {
+            Picker("Rubrique", selection: Binding(
+                get: { index.shelfKey(for: card.categoryKey) },
+                set: { store.setCategory($0, for: card) }
+            )) {
+                ForEach(index.ordered) { category in
+                    Label(category.name, systemImage: category.symbolName).tag(category.key)
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Chip(text: index.name(for: card.categoryKey),
+                     systemImage: index.symbol(for: card.categoryKey), tint: Theme.savoirs)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Theme.savoirs)
+            }
+        }
+        .accessibilityLabel("Rubrique : \(index.name(for: card.categoryKey)). Changer de rubrique")
+    }
+
+    private func etymologySection(_ etymology: String) -> some View {
+        Section {
+            Label {
+                Text(etymology)
+                    .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: "text.book.closed").foregroundStyle(Theme.savoirs)
+            }
+        } header: {
+            Text("Étymologie")
         }
     }
 
@@ -272,7 +313,7 @@ struct KnowledgeVariationSheet: View {
     @State private var change = ""
     @State private var errorMessage: String?
 
-    private let ideas = ["plus simple", "plus détaillée", "ajoute les dates clés",
+    private let ideas = ["ajoute l'étymologie", "plus simple", "plus détaillée", "ajoute les dates clés",
                          "avec un exemple de la vie courante", "une autre question de révision"]
 
     var body: some View {

@@ -7,9 +7,10 @@ public enum KnowledgeSchema {
 
     /// Field order fed to `propertyOrdering`. The title and the one-sentence
     /// summary come first so the model commits to what the card is about before
-    /// it explains it, and the flashcard comes after the explanation it tests.
+    /// it explains it; the etymology follows the definition, as in a
+    /// dictionary; the flashcard comes after the explanation it tests.
     public static let propertyOrder = [
-        "title", "theme", "summary_fr", "body_fr", "key_points_fr",
+        "title", "theme", "summary_fr", "etymology_fr", "body_fr", "key_points_fr",
         "question_fr", "answer_fr", "fun_fact_fr", "wikipedia_query", "tags",
     ]
 
@@ -25,16 +26,18 @@ public enum KnowledgeSchema {
         return .obj(pairs)
     }
 
-    public static var responseSchema: JSONValue {
-        .obj([
+    /// The schema, with `theme` limited to the learner's own category names,
+    /// so a card lands on one of their shelves and never on an invented one.
+    public static func responseSchema(categories: [String]) -> JSONValue {
+        var theme: [(String, JSONValue)] = [("type", .str("string"))]
+        if !categories.isEmpty { theme.append(("enum", .strings(categories))) }
+        return .obj([
             ("type", .str("object")),
             ("properties", .obj([
                 ("title", string()),
-                ("theme", .obj([
-                    ("type", .str("string")),
-                    ("enum", .strings(KnowledgeTheme.allCases.map(\.rawValue))),
-                ])),
+                ("theme", .obj(theme)),
                 ("summary_fr", string()),
+                ("etymology_fr", string(nullable: true)),
                 ("body_fr", string()),
                 ("key_points_fr", strings()),
                 ("question_fr", string()),
@@ -67,7 +70,12 @@ public enum KnowledgeSchema {
     - « title » : le nom du sujet, court (deux à six mots).
     - « theme » : la rubrique qui convient le mieux, parmi la liste imposée.
     - « summary_fr » : une seule phrase qui dit l'essentiel, celle qu'on garderait si on ne \
-    devait en retenir qu'une.
+    devait en retenir qu'une. Pour un mot ou une expression, c'est sa définition.
+    - « etymology_fr » : l'étymologie du mot, ou du terme principal du sujet : la langue \
+    d'origine, la forme et le sens premiers, et le chemin jusqu'au sens actuel, en deux à \
+    quatre phrases. OBLIGATOIRE quand le sujet est un mot ou une expression à définir. Pour \
+    un autre sujet, renseigne-la quand le terme principal a une étymologie qui éclaire le \
+    sens ; sinon null. Si l'origine est inconnue ou discutée, dis-le, sans jamais l'inventer.
     - « body_fr » : l'explication, en paragraphes courts séparés par une ligne vide. Commence par \
     le plus important, donne le contexte et le « pourquoi », puis un exemple concret.
     - « key_points_fr » : trois à cinq points à retenir, chacun une phrase courte et autonome.
@@ -93,6 +101,9 @@ public enum KnowledgeSchema {
         case .approfondi:
             lines.append("Niveau : approfondi. « body_fr » compte quatre ou cinq paragraphes, 350 mots environ au total, avec les nuances et les notions liées.")
         }
+        if request.asksForDefinition {
+            lines.append("Le sujet est un mot ou une expression à définir : « summary_fr » en donne la définition et « etymology_fr » est obligatoire.")
+        }
         if let focus = request.focus?.trimmingCharacters(in: .whitespacesAndNewlines), !focus.isEmpty {
             lines.append("Insiste en particulier sur : \(focus).")
         }
@@ -114,8 +125,10 @@ public enum KnowledgeSchema {
 
     /// The card as plain text, as sent back to the model with a revision.
     public static func render(_ draft: KnowledgeDraft) -> String {
-        var lines = ["Titre : \(draft.title)", "Rubrique : \(draft.theme.frenchLabel)"]
+        var lines = ["Titre : \(draft.title)"]
+        if let category = draft.category { lines.append("Rubrique : \(category)") }
         if let summary = draft.summaryFR { lines.append("Résumé : \(summary)") }
+        if let etymology = draft.etymologyFR { lines.append("Étymologie : \(etymology)") }
         if !draft.bodyFR.isEmpty { lines += ["", "Explication :", draft.bodyFR] }
         if !draft.keyPointsFR.isEmpty {
             lines += ["", "À retenir :"] + draft.keyPointsFR.map { "- \($0)" }

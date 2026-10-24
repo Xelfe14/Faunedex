@@ -2,21 +2,26 @@ import SwiftUI
 import SwiftData
 import FlaunedexCore
 
-/// The collection of knowledge cards, shelved by theme.
+/// The collection of knowledge cards, shelved by the learner's categories.
 struct KnowledgeListView: View {
     @Query(sort: \KnowledgeCard.createdAt, order: .reverse) private var cards: [KnowledgeCard]
+    @Query private var categories: [KnowledgeCategory]
     @Environment(KnowledgeStore.self) private var store
 
     @State private var search = ""
-    @State private var theme: KnowledgeTheme?
+    @State private var categoryKey: String?
     @State private var favoritesOnly = false
     @State private var writing = false
+    @State private var managingCategories = false
     @State private var pendingDeletion: KnowledgeCard?
 
+    private var index: CategoryIndex { CategoryIndex(categories) }
+
     private var filtered: [KnowledgeCard] {
-        cards.filter { card in
+        let index = self.index
+        return cards.filter { card in
             (!favoritesOnly || card.isFavorite)
-            && (theme == nil || card.theme == theme)
+            && (categoryKey == nil || index.shelfKey(for: card.categoryKey) == categoryKey)
             && (search.isEmpty || matches(card, search))
         }
     }
@@ -31,16 +36,19 @@ struct KnowledgeListView: View {
         || card.tags.contains { $0.localizedCaseInsensitiveContains(query) }
     }
 
-    private var shelves: [(theme: KnowledgeTheme, cards: [KnowledgeCard])] {
+    private var shelves: [(category: KnowledgeCategory, cards: [KnowledgeCard])] {
+        let index = self.index
         let current = filtered
-        return KnowledgeTheme.allCases.compactMap { theme in
-            let onShelf = current.filter { $0.theme == theme }
-            return onShelf.isEmpty ? nil : (theme: theme, cards: onShelf)
+        return index.ordered.compactMap { category in
+            let onShelf = current.filter { index.shelfKey(for: $0.categoryKey) == category.key }
+            return onShelf.isEmpty ? nil : (category: category, cards: onShelf)
         }
     }
 
-    private var usedThemes: [KnowledgeTheme] {
-        KnowledgeTheme.allCases.filter { theme in cards.contains { $0.theme == theme } }
+    private var usedCategories: [KnowledgeCategory] {
+        let index = self.index
+        let used = Set(cards.map { index.shelfKey(for: $0.categoryKey) })
+        return index.ordered.filter { used.contains($0.key) }
     }
 
     var body: some View {
@@ -61,7 +69,10 @@ struct KnowledgeListView: View {
         .toolbar { toolbar }
         .tint(Theme.savoirs)
         .sheet(isPresented: $writing) {
-            KnowledgeEditorView(card: nil)
+            KnowledgeEditorView(card: nil, defaultCategoryKey: categoryKey)
+        }
+        .sheet(isPresented: $managingCategories) {
+            KnowledgeCategoriesView()
         }
         .confirmationDialog(
             "Supprimer « \(pendingDeletion?.title ?? "") » ?",
@@ -84,13 +95,13 @@ struct KnowledgeListView: View {
                 ContentUnavailableView("Rien ne correspond", systemImage: "magnifyingglass",
                                        description: Text("Changez de recherche ou de filtre."))
             }
-            ForEach(shelves, id: \.theme) { shelf in
+            ForEach(shelves, id: \.category.key) { shelf in
                 Section {
                     ForEach(shelf.cards) { card in
                         NavigationLink {
                             KnowledgeCardView(card: card)
                         } label: {
-                            KnowledgeRow(card: card)
+                            KnowledgeRow(card: card, symbol: shelf.category.symbolName)
                         }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
@@ -109,8 +120,17 @@ struct KnowledgeListView: View {
                         }
                     }
                 } header: {
-                    Label(shelf.theme.frenchLabel, systemImage: shelf.theme.symbolName)
+                    Label(shelf.category.name, systemImage: shelf.category.symbolName)
                 }
+            }
+            Section {
+                Button {
+                    managingCategories = true
+                } label: {
+                    Label("Gérer les rubriques", systemImage: "folder.badge.gearshape")
+                }
+            } footer: {
+                Text("Créez vos propres rubriques, renommez-les, changez leur icône ou leur ordre.")
             }
         }
         .listStyle(.insetGrouped)
@@ -124,15 +144,21 @@ struct KnowledgeListView: View {
                 Toggle(isOn: $favoritesOnly) {
                     Label("Favoris seulement", systemImage: "star")
                 }
-                Picker("Rubrique", selection: $theme) {
-                    Text("Toutes les rubriques").tag(KnowledgeTheme?.none)
-                    ForEach(usedThemes, id: \.self) { theme in
-                        Label(theme.frenchLabel, systemImage: theme.symbolName)
-                            .tag(KnowledgeTheme?.some(theme))
+                Picker("Rubrique", selection: $categoryKey) {
+                    Text("Toutes les rubriques").tag(String?.none)
+                    ForEach(usedCategories) { category in
+                        Label(category.name, systemImage: category.symbolName)
+                            .tag(String?.some(category.key))
                     }
                 }
+                Divider()
+                Button {
+                    managingCategories = true
+                } label: {
+                    Label("Gérer les rubriques", systemImage: "folder.badge.gearshape")
+                }
             } label: {
-                Image(systemName: favoritesOnly || theme != nil
+                Image(systemName: favoritesOnly || categoryKey != nil
                       ? "line.3.horizontal.decrease.circle.fill"
                       : "line.3.horizontal.decrease.circle")
             }

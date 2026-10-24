@@ -21,9 +21,11 @@ or far away). Every recipe shows its carbon footprint, flags the ingredients tha
 and can ask Gemini for a lower-impact version. Asking for a recipe cooks with the season by default.
 
 **Savoirs** is a deck of knowledge cards. Ask Gemini about anything ("pourquoi le ciel est bleu", "la
-bataille de Marignan") and get a card back: the sentence to remember, a short explanation, the points
-to retain, a review question with its answer, and a picture and link from Wikipedia. Or write the card
-yourself. Cards are shelved by theme and come back as flashcards on a spaced-repetition schedule.
+bataille de Marignan", "sérendipité") and get a card back: the sentence to remember, a short
+explanation, the points to retain, a review question with its answer, and a picture and link from
+Wikipedia. A word always comes with its definition and its etymology. Or write the card yourself.
+Cards are shelved in categories you name, decorate and order yourself, and come back as flashcards on
+a spaced-repetition schedule.
 
 Native SwiftUI · SwiftData + iCloud · offline-first · French throughout.
 
@@ -109,7 +111,7 @@ That seeds four species, three recipes and four knowledge cards, with live Wikim
 Add `-previewSpeciesDetail` or `-previewRecipeDetail` to open a card directly, or `-previewScreen`
 with one of `nature cuisine savoirs reviser pastille` (the whole app, switcher included) or `faune
 flore carte sans-position journal stats decouvertes reglages demander saisons produit impact fiches
-fiche apprendre` (one screen) to jump to it. Set these under **Product → Scheme → Edit Scheme → Arguments** to
+fiche apprendre rubriques nouvelle-rubrique` (one screen) to jump to it. Set these under **Product → Scheme → Edit Scheme → Arguments** to
 use them from Xcode. They are compiled out of Release builds.
 
 In Xcode:
@@ -192,16 +194,24 @@ never scaled, because doubling a batch does not double its baking time.
 
 ## How a knowledge card works (one ask)
 
-1. **Gemini** (same model, same key) returns a structured card: title, one of eleven themes, the one
-   sentence to remember, an explanation in short paragraphs, three to five points to retain, a review
-   question and its answer, an optional anecdote, and the title of the matching French Wikipedia
-   article. The prompt forbids invented dates, figures and quotations, and asks for uncertainty to be
+1. **Gemini** (same model, same key) returns a structured card: title, one of your categories, the one
+   sentence to remember (for a word, its definition), the etymology, an explanation in short
+   paragraphs, three to five points to retain, a review question and its answer, an optional
+   anecdote, and the title of the matching French Wikipedia article. The etymology is required when
+   the subject is a word or an expression to define (a single word, "définition de…", "que veut
+   dire…", a quoted expression), and given for other subjects when it sheds light on the meaning. The prompt forbids invented dates, figures and quotations, and asks for uncertainty to be
    stated rather than settled. Two depths: *l'essentiel* (about 120 words) or *approfondi* (about 350).
 2. **Picture and link** come from that Wikipedia article, through the same lookup as dish photos, with
    the Commons licence credited. The article is the card's "en savoir plus", never its claimed source.
-3. **Then it is yours**: rewrite any field, add notes, star it, or ask Gemini to amend it ("plus
-   simple", "ajoute les dates clés"). A card edited by hand stops crediting the model.
-4. **Review** is a Leitner schedule: *Je sais* moves a card to the next box (1, 3, 7, 14, 30, 60, then
+3. **Then it is yours**: rewrite any field, add notes, star it, move it to another category from its
+   chip, or ask Gemini to amend it ("plus simple", "ajoute l'étymologie"). A card edited by hand stops
+   crediting the model.
+4. **Categories are yours too.** A new collection starts with eleven (Sciences, Histoire…); rename
+   them, change their icon, reorder them, delete them (their cards move to Divers) or add your own,
+   from **Gérer les rubriques** under the cards or from any category picker. Gemini is offered your
+   categories by name, as a closed list, so a card always lands on one of your shelves. Cards point to
+   a category by a stable key, so renaming one moves nothing.
+5. **Review** is a Leitner schedule: *Je sais* moves a card to the next box (1, 3, 7, 14, 30, 60, then
    120 days), *Facile* skips one, *À revoir* sends it back to the start and brings it back at the end
    of the same session. Due dates fall at the start of a day, so a card reviewed at 23:00 is due the
    morning it is scheduled for. Free practice runs through every card without touching the schedule.

@@ -127,6 +127,7 @@ enum SampleData {
         for (index, spec) in knowledgeSpecs.enumerated() {
             let card = KnowledgeCard(title: spec.draft.title, source: spec.source)
             card.apply(spec.draft)
+            card.categoryKey = KnowledgeTheme.resolve(spec.draft.category).rawValue
             card.notes = spec.notes
             card.isFavorite = spec.favorite
             card.imageURLString = spec.imageURL
@@ -168,8 +169,9 @@ enum SampleData {
         KnowledgeSpec(
             draft: KnowledgeDraft(
                 title: "Photosynthèse",
-                theme: .sciences,
+                category: "Sciences",
                 summaryFR: "Les plantes fabriquent leur propre matière à partir de lumière, d'eau et de dioxyde de carbone, en rejetant du dioxygène.",
+                etymologyFR: "Du grec phôs, phôtos, « lumière », et sunthesis, « action de mettre ensemble, composition ». Le mot apparaît à la fin du XIXe siècle pour nommer l'assemblage de matière organique à l'aide de la lumière.",
                 bodyFR: "La photosynthèse a lieu dans les chloroplastes des feuilles, grâce à un pigment vert, la chlorophylle, qui capte l'énergie de la lumière. Cette énergie sert à assembler le dioxyde de carbone de l'air et l'eau puisée par les racines en sucres, qui nourrissent la plante et forment son bois, ses feuilles et ses fruits.\n\nLe dioxygène rejeté vient de l'eau, et non du CO₂ : c'est en cassant des molécules d'eau que la plante libère l'oxygène que nous respirons. Presque toute la chaîne alimentaire terrestre repose sur ce mécanisme.",
                 keyPointsFR: [
                     "Elle a lieu dans les chloroplastes, grâce à la chlorophylle.",
@@ -189,7 +191,7 @@ enum SampleData {
         KnowledgeSpec(
             draft: KnowledgeDraft(
                 title: "Bataille de Marignan",
-                theme: .histoire,
+                category: "Histoire",
                 summaryFR: "En septembre 1515, François Ier bat les mercenaires suisses près de Milan et s'empare du duché.",
                 bodyFR: "La bataille se déroule les 13 et 14 septembre 1515 à Marignan, aujourd'hui Melegnano, au sud-est de Milan. Le jeune roi François Ier, monté sur le trône quelques mois plus tôt, y affronte les Suisses qui défendent le duché de Milan pour le compte des Sforza.\n\nL'artillerie française et l'arrivée des alliés vénitiens le second jour décident de la victoire. Elle ouvre le Milanais à la France et conduit en 1516 à la « paix perpétuelle » avec les cantons suisses, qui fourniront ensuite des soldats aux rois de France.",
                 keyPointsFR: [
@@ -210,7 +212,7 @@ enum SampleData {
         KnowledgeSpec(
             draft: KnowledgeDraft(
                 title: "Pourquoi le ciel est bleu",
-                theme: .sciences,
+                category: "Sciences",
                 summaryFR: "Les molécules de l'air diffusent bien plus la lumière bleue du Soleil que la rouge : le bleu nous arrive de tout le ciel.",
                 bodyFR: "La lumière du Soleil contient toutes les couleurs. En traversant l'atmosphère, elle rencontre des molécules d'azote et d'oxygène bien plus petites que sa longueur d'onde, qui la dévient dans toutes les directions : c'est la diffusion Rayleigh. Elle est d'autant plus forte que la longueur d'onde est courte, si bien que le bleu est diffusé plusieurs fois plus que le rouge.\n\nAu coucher du soleil, la lumière traverse une épaisseur d'air bien plus grande. Le bleu a été dispersé en chemin, et ce sont l'orangé et le rouge qui nous parviennent directement.",
                 keyPointsFR: [
@@ -231,7 +233,7 @@ enum SampleData {
         KnowledgeSpec(
             draft: KnowledgeDraft(
                 title: "Théorie des signatures",
-                theme: .sante,
+                category: "Santé",
                 summaryFR: "Croyance ancienne selon laquelle la forme d'une plante indique l'organe qu'elle soigne.",
                 bodyFR: "Répandue en Europe du Moyen Âge à la Renaissance, et défendue au XVIe siècle par Paracelse, elle voulait que la nature « signe » ses remèdes : une plante ressemblant à un organe devait le guérir.\n\nL'hépatique, dont la feuille à trois lobes rappelle un foie, passait ainsi pour soigner les maladies du foie. Aucune de ces correspondances n'a résisté à l'examen, mais bien des noms de plantes en gardent la trace.",
                 keyPointsFR: [

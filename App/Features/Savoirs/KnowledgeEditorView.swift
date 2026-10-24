@@ -8,13 +8,17 @@ import FlaunedexCore
 struct KnowledgeEditorView: View {
     /// Nil to write a new card.
     let card: KnowledgeCard?
+    /// The category a new card starts in, such as the one the list is
+    /// filtered on.
+    var defaultCategoryKey: String? = nil
 
     @Environment(KnowledgeStore.self) private var store
     @Environment(\.dismiss) private var dismiss
 
     @State private var title = ""
-    @State private var theme: KnowledgeTheme = .divers
+    @State private var categoryKey: String?
     @State private var summary = ""
+    @State private var etymology = ""
     @State private var bodyText = ""
     @State private var keyPoints = ""
     @State private var question = ""
@@ -34,13 +38,19 @@ struct KnowledgeEditorView: View {
                 Section {
                     TextField("Titre", text: $title)
                         .font(.headline)
-                    Picker("Rubrique", selection: $theme) {
-                        ForEach(KnowledgeTheme.allCases, id: \.self) { theme in
-                            Label(theme.frenchLabel, systemImage: theme.symbolName).tag(theme)
-                        }
-                    }
-                    TextField("La phrase à retenir", text: $summary, axis: .vertical)
+                    TextField("La phrase à retenir, ou la définition", text: $summary, axis: .vertical)
                         .lineLimit(1...3)
+                }
+
+                Section {
+                    CategoryPicker(selection: $categoryKey)
+                }
+
+                Section {
+                    TextField("D'où vient le mot (facultatif)", text: $etymology, axis: .vertical)
+                        .lineLimit(1...6)
+                } header: {
+                    Text("Étymologie")
                 }
 
                 Section {
@@ -101,10 +111,14 @@ struct KnowledgeEditorView: View {
     private func load() {
         guard !loaded else { return }
         loaded = true
-        guard let card else { return }
+        guard let card else {
+            categoryKey = defaultCategoryKey ?? KnowledgeStore.fallbackKey
+            return
+        }
         title = card.title
-        theme = card.theme
+        categoryKey = card.categoryKey
         summary = card.summaryFR ?? ""
+        etymology = card.etymologyFR ?? ""
         bodyText = card.bodyFR
         keyPoints = card.keyPoints.joined(separator: "\n")
         question = card.question ?? ""
@@ -117,8 +131,8 @@ struct KnowledgeEditorView: View {
     private func save() {
         let draft = KnowledgeDraft(
             title: title,
-            theme: theme,
             summaryFR: summary,
+            etymologyFR: etymology,
             bodyFR: bodyText,
             keyPointsFR: KnowledgeDraft.keyPoints(fromLines: keyPoints),
             questionFR: question,
@@ -127,10 +141,11 @@ struct KnowledgeEditorView: View {
             wikipediaQuery: card?.wikipediaQuery,
             tags: tags.components(separatedBy: ",")
         )
+        let key = categoryKey ?? KnowledgeStore.fallbackKey
         if let card {
-            store.applyEdit(draft, notes: notes, to: card)
+            store.applyEdit(draft, categoryKey: key, notes: notes, to: card)
         } else {
-            let created = store.create(draft, notes: notes)
+            let created = store.create(draft, categoryKey: key, notes: notes)
             // A card written by hand gets a picture too, if Wikipedia has one.
             Task { await store.attachPicture(to: created, query: created.title) }
         }
