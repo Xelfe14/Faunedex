@@ -26,6 +26,11 @@ struct CaptureStatusPill: View {
                     // Once identified, it stays long enough to be read and tapped.
                     .task(id: sighting.statusRaw) {
                         guard sighting.status == .complete else { return }
+                        #if DEBUG
+                        // CI's screenshot is taken long after launch on a slow
+                        // runner: keep the pill up for it.
+                        if CommandLine.arguments.contains("pastille") { return }
+                        #endif
                         try? await Task.sleep(nanoseconds: 8_000_000_000)
                         guard !Task.isCancelled, scan.lastCapture === sighting else { return }
                         withAnimation { scan.lastCapture = nil }
