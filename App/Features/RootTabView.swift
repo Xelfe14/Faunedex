@@ -5,9 +5,8 @@ import FlaunedexCore
 /// The three apps Flaunedex holds.
 ///
 /// They share the storage, the Gemini key and the design language, but each is
-/// its own small app with its own tab bar. None is nested inside another: the
-/// home screen shows all three side by side, and every app has the same
-/// "Accueil" tab, first in its bar, to come back to it.
+/// its own small app with its own tab bar. A bar across the top of every
+/// screen switches between them in one tap, each in its own colour.
 enum AppSection: String, CaseIterable, Identifiable {
     case nature
     case cuisine
@@ -20,14 +19,6 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .nature: return "Faune & Flore"
         case .cuisine: return "Cuisine"
         case .savoirs: return "Savoirs"
-        }
-    }
-
-    var tagline: String {
-        switch self {
-        case .nature: return "Identifier et collectionner les espèces"
-        case .cuisine: return "Recettes, saisons et empreinte carbone"
-        case .savoirs: return "Fiches de connaissances à réviser"
         }
     }
 
@@ -46,60 +37,64 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .savoirs: return Theme.savoirs
         }
     }
-
-    /// Where the app opens when its card is tapped.
-    var entry: AppDestination {
-        switch self {
-        case .nature: return .nature(.faune)
-        case .cuisine: return .cuisine(.recettes)
-        case .savoirs: return .savoirs(.fiches)
-        }
-    }
 }
 
-enum NatureTab: Hashable { case home, faune, flore, capture, carte }
-enum CuisineTab: Hashable { case home, recettes, demander, saisons }
-enum SavoirsTab: Hashable { case home, fiches, apprendre, reviser }
+enum NatureTab: Hashable { case faune, flore, capture, carte, plus }
+enum CuisineTab: Hashable { case recettes, demander, saisons }
+enum SavoirsTab: Hashable { case fiches, apprendre, reviser }
 
-/// An app, and the tab it opens on, so the home screen's shortcuts ("Capturer",
-/// "Réviser") land on the right screen.
-enum AppDestination: Hashable {
-    case nature(NatureTab)
-    case cuisine(CuisineTab)
-    case savoirs(SavoirsTab)
+private struct ActiveAppKey: EnvironmentKey {
+    static let defaultValue = true
+}
 
-    var section: AppSection {
-        switch self {
-        case .nature: return .nature
-        case .cuisine: return .cuisine
-        case .savoirs: return .savoirs
-        }
+extension EnvironmentValues {
+    /// False for an app kept alive behind the one on screen, so it can pause
+    /// what shouldn't run unseen (the camera, the GPS).
+    var isActiveApp: Bool {
+        get { self[ActiveAppKey.self] }
+        set { self[ActiveAppKey.self] = newValue }
     }
 }
 
 /// The app shell. Creates the coordinators once the model context exists, then
-/// shows the home screen or whichever app is open.
+/// shows the app switcher above whichever app is open.
 struct RootTabView: View {
     @Environment(\.modelContext) private var context
     @Environment(APIKeys.self) private var keys
     @Environment(Connectivity.self) private var connectivity
 
-    /// The open app, kept across a relaunch by the system (not across a
-    /// force-quit, which lands on the home screen as a fresh start should).
-    @SceneStorage("openApp") private var storedApp = ""
-    @State private var open: AppDestination?
+    /// The app on screen, kept across launches.
+    @AppStorage("currentApp") private var storedApp = AppSection.nature.rawValue
+    /// Apps opened since launch. They stay alive behind the current one, so
+    /// coming back to a recipe or a card finds it where it was left.
+    @State private var opened: Set<AppSection> = []
+    @State private var showingSettings = false
 
     @State private var scan: ScanCoordinator?
     @State private var recipes: RecipeStore?
     @State private var knowledge: KnowledgeStore?
 
+    private var current: AppSection {
+        #if DEBUG
+        if let screen = previewScreen, let app = Self.previewApps[screen] { return app }
+        #endif
+        return AppSection(rawValue: storedApp) ?? .nature
+    }
+
     #if DEBUG
     /// Debug-only preview routing so any screen can be inspected directly:
     /// `-previewSpeciesDetail`, `-previewRecipeDetail`, or `-previewScreen <name>`
-    /// with a name from `previewDestination` below.
+    /// with a name from `previewApps` (the whole shell) or `previewDestination`.
     @Query(sort: \Species.dexNumber) private var previewSpecies: [Species]
     @Query(sort: \Recipe.sortIndex) private var previewRecipes: [Recipe]
     @Query(sort: \KnowledgeCard.createdAt, order: .reverse) private var previewCards: [KnowledgeCard]
+    @Query(sort: \Sighting.capturedAt) private var previewSightings: [Sighting]
+
+    private static let previewApps: [String: AppSection] = [
+        "nature": .nature, "pastille": .nature,
+        "cuisine": .cuisine,
+        "savoirs": .savoirs, "reviser": .savoirs,
+    ]
 
     private var previewScreen: String? {
         let args = CommandLine.arguments
@@ -138,8 +133,13 @@ struct RootTabView: View {
                 ProgressView()
                     .canvasBackground()
                     .task {
-                        open = AppSection(rawValue: storedApp)?.entry
-                        scan = ScanCoordinator(context: context, keys: keys)
+                        let scan = ScanCoordinator(context: context, keys: keys)
+                        #if DEBUG
+                        if previewScreen == "pastille" {
+                            scan.lastCapture = previewSightings.first { $0.status == .complete && $0.hasCoordinate }
+                        }
+                        #endif
+                        self.scan = scan
                         recipes = RecipeStore(context: context, keys: keys)
                         knowledge = KnowledgeStore(context: context, keys: keys)
                     }
@@ -153,54 +153,87 @@ struct RootTabView: View {
             NavigationStack { RecipeDetailView(recipe: first) }
         } else if wantsDetailPreview, let first = previewSpecies.first {
             NavigationStack { SpeciesDetailView(species: first) }
-        } else if let screen = previewScreen {
+        } else if let screen = previewScreen, Self.previewApps[screen] == nil {
             previewDestination(screen)
         } else {
-            apps
+            shell
         }
         #else
-        apps
+        shell
         #endif
     }
 
-    @ViewBuilder private var apps: some View {
-        Group {
-            switch open {
-            case nil:
-                AppsHomeView(open: show)
-            case .nature(let tab):
-                NatureTabs(start: tab, goHome: goHome)
-            case .cuisine(let tab):
-                CuisineTabs(start: tab, goHome: goHome)
-            case .savoirs(let tab):
-                SavoirsTabs(start: tab, goHome: goHome)
+    private var shell: some View {
+        VStack(spacing: 0) {
+            AppSwitcherBar(current: current, select: select) {
+                showingSettings = true
+            }
+            ZStack {
+                ForEach(AppSection.allCases) { section in
+                    if section == current || opened.contains(section) {
+                        app(section)
+                            .opacity(section == current ? 1 : 0)
+                            .allowsHitTesting(section == current)
+                            .accessibilityHidden(section != current)
+                            .environment(\.isActiveApp, section == current)
+                    }
+                }
+            }
+            .overlay(alignment: .bottom) {
+                CaptureStatusPill()
+                    .padding(.bottom, Self.tabBarClearance)
             }
         }
-        .transition(.opacity)
+        .onAppear { opened.insert(current) }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                SettingsView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("OK") { showingSettings = false }
+                        }
+                    }
+            }
+        }
     }
 
-    private func show(_ destination: AppDestination) {
-        withAnimation(.easeInOut(duration: 0.2)) { open = destination }
-        storedApp = destination.section.rawValue
+    /// Height to keep free above the bottom edge for the tab bar, so the
+    /// status pill floats just over it.
+    private static var tabBarClearance: CGFloat {
+        if #available(iOS 26.0, *) { return 70 }
+        return 57
     }
 
-    private func goHome() {
-        withAnimation(.easeInOut(duration: 0.2)) { open = nil }
-        storedApp = ""
+    @ViewBuilder private func app(_ section: AppSection) -> some View {
+        switch section {
+        case .nature:
+            NatureTabs(start: .faune)
+        case .cuisine:
+            CuisineTabs(start: .recettes)
+        case .savoirs:
+            #if DEBUG
+            SavoirsTabs(start: previewScreen == "reviser" ? .reviser : .fiches)
+            #else
+            SavoirsTabs(start: .fiches)
+            #endif
+        }
+    }
+
+    private func select(_ section: AppSection) {
+        opened.insert(section)
+        withAnimation(.easeInOut(duration: 0.15)) { storedApp = section.rawValue }
     }
 
     #if DEBUG
     @ViewBuilder private func previewDestination(_ screen: String) -> some View {
         switch screen {
-        case "accueil": AppsHomeView(open: { _ in })
-        case "nature": NatureTabs(start: .faune, goHome: {})
         case "flore": DexView(realm: .plant)
         case "carte": SightingsMapView()
+        case "sans-position": UnlocatedSightingsView()
         case "journal": NavigationStack { JournalView() }
         case "stats": NavigationStack { StatsView() }
         case "decouvertes": NavigationStack { DiscoverView() }
         case "reglages": NavigationStack { SettingsView() }
-        case "recettes", "cuisine": CuisineTabs(start: .recettes, goHome: {})
         case "demander": NavigationStack { RecipeAskView() }
         case "saisons": NavigationStack { SeasonsView() }
         case "produit":
@@ -223,9 +256,8 @@ struct RootTabView: View {
                     .navigationBarTitleDisplayMode(.inline)
                 }
             }
-        case "savoirs", "fiches": SavoirsTabs(start: .fiches, goHome: {})
+        case "fiches": NavigationStack { KnowledgeListView() }
         case "apprendre": NavigationStack { KnowledgeAskView() }
-        case "reviser": SavoirsTabs(start: .reviser, goHome: {})
         case "fiche":
             if let card = previewCards.first(where: { $0.title == "Photosynthèse" }) ?? previewCards.first {
                 NavigationStack { KnowledgeCardView(card: card) }
@@ -236,63 +268,136 @@ struct RootTabView: View {
     #endif
 }
 
-// MARK: - The way home
+// MARK: - Switching apps
 
-/// The first tab of every app. Selecting it doesn't show a page: it returns to
-/// the home screen, so the three apps are always one tap from each other.
-private struct HomeTabContent: View {
+/// The bar across the top of every screen: one tab per app, in that app's
+/// colour, filled for the app on screen, and the shared Réglages.
+private struct AppSwitcherBar: View {
+    let current: AppSection
+    let select: (AppSection) -> Void
+    let openSettings: () -> Void
+
+    @Query private var cards: [KnowledgeCard]
+
+    private var dueCount: Int {
+        let now = Date.now
+        return cards.filter { $0.isDue(at: now) }.count
+    }
+
     var body: some View {
-        Theme.canvas.ignoresSafeArea()
-    }
-}
-
-private extension View {
-    func homeTabItem() -> some View {
-        tabItem { Label("Accueil", systemImage: "house.fill") }
-    }
-}
-
-/// A tab selection that sends the "Accueil" tab home instead of selecting it.
-private func homeAware<Tab: Hashable>(_ tab: Binding<Tab>, home: Tab, goHome: @escaping () -> Void) -> Binding<Tab> {
-    Binding(
-        get: { tab.wrappedValue },
-        set: { newValue in
-            if newValue == home { goHome() } else { tab.wrappedValue = newValue }
+        HStack(spacing: 6) {
+            ForEach(AppSection.allCases) { section in
+                Button {
+                    select(section)
+                } label: {
+                    segment(section)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(section.frenchLabel)
+                .accessibilityAddTraits(section == current ? .isSelected : [])
+            }
+            Button(action: openSettings) {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Réglages")
         }
-    )
+        .padding(.horizontal, 12)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    private func segment(_ section: AppSection) -> some View {
+        let selected = section == current
+        return HStack(spacing: 4) {
+            Image(systemName: section.symbolName)
+                .font(.caption.weight(.bold))
+            Text(section.frenchLabel)
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity)
+        .frame(height: 34)
+        .foregroundStyle(selected ? Color.white : section.tint)
+        .background(selected ? section.tint : section.tint.opacity(0.12), in: Capsule())
+        .overlay(alignment: .topTrailing) {
+            if section == .savoirs, dueCount > 0 {
+                Text("\(dueCount)")
+                    .font(.caption2.weight(.bold).monospacedDigit())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .frame(minWidth: 18, minHeight: 18)
+                    .background(Color.red, in: Capsule())
+                    .offset(x: 4, y: -5)
+                    .accessibilityLabel("\(dueCount) à réviser")
+            }
+        }
+        .contentShape(Capsule())
+    }
 }
 
 // MARK: - Faune & Flore
 
 /// The field companion: collection, capture, map.
 private struct NatureTabs: View {
-    let goHome: () -> Void
     @State private var tab: NatureTab
+    /// Where the shutter sends the user back to once the photo is saved.
+    @State private var beforeCapture: NatureTab = .faune
 
-    init(start: NatureTab, goHome: @escaping () -> Void) {
-        _tab = State(initialValue: start == .home ? .faune : start)
-        self.goHome = goHome
+    init(start: NatureTab) {
+        _tab = State(initialValue: start)
     }
 
     var body: some View {
-        TabView(selection: homeAware($tab, home: .home, goHome: goHome)) {
-            HomeTabContent()
-                .homeTabItem()
-                .tag(NatureTab.home)
+        TabView(selection: $tab) {
             DexView(realm: .animal)
                 .tabItem { Label("Faune", systemImage: "pawprint.fill") }
                 .tag(NatureTab.faune)
             DexView(realm: .plant)
                 .tabItem { Label("Flore", systemImage: "leaf.fill") }
                 .tag(NatureTab.flore)
-            CaptureView()
+            CaptureView(onCaptured: { tab = beforeCapture })
                 .tabItem { Label("Capturer", systemImage: "camera.fill") }
                 .tag(NatureTab.capture)
             SightingsMapView()
                 .tabItem { Label("Carte", systemImage: "map.fill") }
                 .tag(NatureTab.carte)
+            NatureMoreView()
+                .tabItem { Label("Plus", systemImage: "ellipsis.circle.fill") }
+                .tag(NatureTab.plus)
         }
         .tint(Theme.brand)
+        .onChange(of: tab) { old, new in
+            if new == .capture && old != .capture { beforeCapture = old }
+        }
+    }
+}
+
+/// The collection's pages that have no tab of their own.
+private struct NatureMoreView: View {
+    var body: some View {
+        NavigationStack {
+            List {
+                NavigationLink { DiscoverView() } label: {
+                    Label("Découvertes", systemImage: "sparkle.magnifyingglass")
+                }
+                NavigationLink { JournalView() } label: {
+                    Label("Journal", systemImage: "book.closed.fill")
+                }
+                NavigationLink { StatsView() } label: {
+                    Label("Statistiques", systemImage: "chart.bar.fill")
+                }
+            }
+            .navigationTitle("Plus")
+        }
     }
 }
 
@@ -300,19 +405,14 @@ private struct NatureTabs: View {
 
 /// The recipe bank and the seasonal calendar.
 private struct CuisineTabs: View {
-    let goHome: () -> Void
     @State private var tab: CuisineTab
 
-    init(start: CuisineTab, goHome: @escaping () -> Void) {
-        _tab = State(initialValue: start == .home ? .recettes : start)
-        self.goHome = goHome
+    init(start: CuisineTab) {
+        _tab = State(initialValue: start)
     }
 
     var body: some View {
-        TabView(selection: homeAware($tab, home: .home, goHome: goHome)) {
-            HomeTabContent()
-                .homeTabItem()
-                .tag(CuisineTab.home)
+        TabView(selection: $tab) {
             NavigationStack { RecipesView() }
                 .tabItem { Label("Recettes", systemImage: "book.pages.fill") }
                 .tag(CuisineTab.recettes)
@@ -331,13 +431,11 @@ private struct CuisineTabs: View {
 
 /// The knowledge cards: the collection, asking for a new one, and review.
 private struct SavoirsTabs: View {
-    let goHome: () -> Void
     @State private var tab: SavoirsTab
     @Query private var cards: [KnowledgeCard]
 
-    init(start: SavoirsTab, goHome: @escaping () -> Void) {
-        _tab = State(initialValue: start == .home ? .fiches : start)
-        self.goHome = goHome
+    init(start: SavoirsTab) {
+        _tab = State(initialValue: start)
     }
 
     private var dueCount: Int {
@@ -346,10 +444,7 @@ private struct SavoirsTabs: View {
     }
 
     var body: some View {
-        TabView(selection: homeAware($tab, home: .home, goHome: goHome)) {
-            HomeTabContent()
-                .homeTabItem()
-                .tag(SavoirsTab.home)
+        TabView(selection: $tab) {
             NavigationStack { KnowledgeListView() }
                 .tabItem { Label("Fiches", systemImage: "rectangle.stack.fill") }
                 .tag(SavoirsTab.fiches)

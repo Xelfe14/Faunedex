@@ -59,6 +59,18 @@ enum SampleData {
                 sighting.status = .complete
                 context.insert(sighting)
             }
+
+            // One photo the GPS missed, so the map's "sans position" path
+            // has something to show.
+            if index == 0 {
+                let missed = Sighting(photoRelativePath: "", latitude: 0, longitude: 0,
+                                      horizontalAccuracy: -1,
+                                      capturedAt: Date().addingTimeInterval(-3_600))
+                missed.speciesKey = spec.gbifKey
+                missed.species = species
+                missed.status = .complete
+                context.insert(missed)
+            }
         }
         seedRecipes(into: context)
         seedKnowledge(into: context)

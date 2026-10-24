@@ -39,7 +39,7 @@ struct KnowledgeAskView: View {
         Form {
             if !keys.hasGeminiKey {
                 Section {
-                    Label("Ajoutez votre clé Gemini dans Réglages (la roue dentée de l’accueil) pour créer une fiche.",
+                    Label("Ajoutez votre clé Gemini dans Réglages (la roue dentée en haut à droite) pour créer une fiche.",
                           systemImage: "key.fill")
                         .font(.subheadline)
                         .foregroundStyle(.orange)

@@ -47,7 +47,7 @@ struct RecipeAskView: View {
         Form {
             if !keys.hasGeminiKey {
                 Section {
-                    Label("Ajoutez votre clé Gemini dans Réglages (la roue dentée de l’accueil) pour demander une recette.",
+                    Label("Ajoutez votre clé Gemini dans Réglages (la roue dentée en haut à droite) pour demander une recette.",
                           systemImage: "key.fill")
                         .font(.subheadline)
                         .foregroundStyle(.orange)

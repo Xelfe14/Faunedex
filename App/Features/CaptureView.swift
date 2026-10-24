@@ -7,10 +7,20 @@ import FlaunedexCore
 /// The capture screen: a live camera, a shutter that grabs the frame **and** the
 /// GPS fix, queues the sighting, and kicks off identification. Fully usable
 /// offline — the network work is deferred to the scan queue.
+///
+/// The shutter never waits: the GPS is warmed up while the camera is open, and
+/// a position that arrives after the photo is attached to it then. Once the
+/// photo is saved, `onCaptured` takes the user back where they came from, and
+/// the status pill follows the identification from there.
 struct CaptureView: View {
+    /// Called once a photo is safely queued.
+    var onCaptured: () -> Void = {}
+
     @Environment(ScanCoordinator.self) private var scan
     @Environment(APIKeys.self) private var keys
     @Environment(Connectivity.self) private var connectivity
+    @Environment(\.isActiveApp) private var isActiveApp
+    @Environment(\.openURL) private var openURL
     @Query private var sightings: [Sighting]
 
     @State private var camera = CameraModel()
@@ -18,6 +28,9 @@ struct CaptureView: View {
     @State private var isCapturing = false
     @State private var toast: String?
     @State private var flash = false
+    /// This tab is the one showing in Faune & Flore. Hiding the whole app
+    /// doesn't make it disappear, so the two are tracked apart.
+    @State private var onScreen = false
 
     private var pendingCount: Int {
         sightings.filter { $0.status != .complete && $0.status != .needsReview }.count
@@ -25,34 +38,87 @@ struct CaptureView: View {
 
     var body: some View {
         ZStack {
-            CameraPreview(session: camera.session).ignoresSafeArea()
+            // Kept clear of the tab bar, which stays readable on top of a
+            // live picture instead of fading into it.
+            CameraPreview(session: camera.session)
 
             // Shutter flash.
-            if flash { Color.white.ignoresSafeArea().transition(.opacity) }
+            if flash { Color.white.transition(.opacity) }
 
             VStack(spacing: 10) {
                 banners
                 Spacer()
                 if let toast { toastView(toast) }
+                positionIndicator
                 shutterRow
             }
             .padding()
         }
+        .background(Color.black)
+        .toolbarBackground(.visible, for: .tabBar)
         .task {
+            onScreen = true
+            scan.cameraOnScreen = true
             _ = await camera.requestAccess()
-            location.requestAuthorization()
+            location.startWarmingUp()
             camera.configure()
             camera.start()
-            await scan.processQueue()
+            // Not tied to this screen: leaving it must not cancel an
+            // identification half way through.
+            Task { await scan.processQueue() }
         }
-        .onDisappear { camera.stop() }
+        .onDisappear {
+            onScreen = false
+            scan.cameraOnScreen = false
+            camera.stop()
+            location.stopWarmingUp()
+        }
+        // Switching to Cuisine or Savoirs keeps this screen alive but hidden:
+        // the camera and the GPS stop with it.
+        .onChange(of: isActiveApp) { _, active in
+            guard onScreen else { return }
+            scan.cameraOnScreen = active
+            if active {
+                camera.start()
+                location.startWarmingUp()
+            } else {
+                camera.stop()
+                location.stopWarmingUp()
+            }
+        }
+    }
+
+    /// Whether the photo will land on the map.
+    @ViewBuilder private var positionIndicator: some View {
+        if !location.isDenied {
+            Group {
+                if location.hasFix {
+                    Label("Position trouvée", systemImage: "location.fill")
+                } else {
+                    Label("Recherche de la position…", systemImage: "location")
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(.ultraThinMaterial, in: Capsule())
+        }
     }
 
     @ViewBuilder private var banners: some View {
         VStack(spacing: 8) {
             if !keys.hasGeminiKey {
-                banner("Ajoutez votre clé Gemini dans Réglages (la roue dentée de l’accueil) pour identifier vos photos.",
+                banner("Ajoutez votre clé Gemini dans Réglages (la roue dentée en haut à droite) pour identifier vos photos.",
                        systemImage: "key.fill", tint: .orange)
+            }
+            if location.isDenied {
+                Button {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                } label: {
+                    banner("Localisation refusée : vos photos ne seront pas placées sur la carte. Touchez pour l'autoriser.",
+                           systemImage: "location.slash.fill", tint: .orange)
+                }
+                .buttonStyle(.plain)
             }
             if !connectivity.isOnline {
                 banner("Hors ligne — vos photos seront identifiées au retour du réseau.",
@@ -103,24 +169,39 @@ struct CaptureView: View {
         isCapturing = true
         defer { isCapturing = false }
 
-        let fix = await location.currentLocation()
+        let fix = location.recentFix()
         do {
             let data = try await camera.capture(location: fix)
             withAnimation(.easeOut(duration: 0.08)) { flash = true }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             withAnimation(.easeIn(duration: 0.22).delay(0.08)) { flash = false }
 
-            _ = try scan.enqueueCapture(
+            let sighting = try scan.enqueueCapture(
                 imageData: data,
                 latitude: fix?.coordinate.latitude ?? 0,
                 longitude: fix?.coordinate.longitude ?? 0,
                 accuracy: fix?.horizontalAccuracy ?? -1
             )
-            show(connectivity.isOnline ? "Photo enregistrée — identification en cours…"
-                                       : "Photo enregistrée — en file d'attente.")
+            if fix == nil && !location.isDenied {
+                attachLateFix(to: sighting)
+            }
+            onCaptured()
             if connectivity.isOnline { await scan.processQueue() }
         } catch {
             show("Échec de la capture.")
+        }
+    }
+
+    /// The GPS hadn't found the position yet when the photo was taken: keep
+    /// listening, and place the sighting when it does.
+    private func attachLateFix(to sighting: Sighting) {
+        let provider = location
+        Task {
+            guard let late = await provider.waitForFix() else { return }
+            await scan.setLocation(latitude: late.coordinate.latitude,
+                                   longitude: late.coordinate.longitude,
+                                   accuracy: late.horizontalAccuracy,
+                                   for: sighting)
         }
     }
 

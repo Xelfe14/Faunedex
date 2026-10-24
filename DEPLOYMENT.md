@@ -69,7 +69,7 @@ ID and approval takes longer.
 These are the first calls the app will ever make for real, so do them before
 relying on it in the field:
 
-1. The gear at the top right of the home screen (**Réglages**) → paste your
+1. The gear at the top right of the screen (**Réglages**) → paste your
    Gemini key. The one key serves the three apps.
 2. Check the **Sauvegarde** row reads *Sauvegarde iCloud active*. *iCloud non
    connecté* means the iPhone isn't signed in to iCloud; the app still works, it

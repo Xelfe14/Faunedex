@@ -19,6 +19,15 @@ final class ScanCoordinator {
     /// Set when a scan unlocks a brand-new species, so the UI can celebrate.
     var newlyUnlocked: Species?
     var isProcessing = false
+    /// The photo just taken. The status pill follows it from "identification
+    /// en cours" to its result, wherever the user has gone in the meantime.
+    var lastCapture: Sighting?
+    /// The camera is on screen. The status pill steps aside, so it never sits
+    /// on the shutter.
+    var cameraOnScreen = false
+    /// A capture arrived while a pass was already running: run another one
+    /// after it, or that photo would wait for the next trigger.
+    private var rerunRequested = false
 
     init(context: ModelContext, keys: APIKeys) {
         self.context = context
@@ -35,7 +44,22 @@ final class ScanCoordinator {
                                 latitude: latitude, longitude: longitude, horizontalAccuracy: accuracy)
         context.insert(sighting)
         try context.save()
+        lastCapture = sighting
         return sighting
+    }
+
+    /// Give a sighting the position it was missing: a GPS fix that arrived
+    /// after the shutter, or a place picked on the map. The country is looked
+    /// up again for the new position.
+    func setLocation(latitude: Double, longitude: Double, accuracy: Double, for sighting: Sighting) async {
+        sighting.latitude = latitude
+        sighting.longitude = longitude
+        sighting.horizontalAccuracy = accuracy
+        sighting.countryISO = nil
+        sighting.geocodeAttempts = 0
+        try? context.save()
+        await geocode(sighting)
+        try? context.save()
     }
 
     /// Drain every unresolved sighting. Safe to call repeatedly; each item is
@@ -50,10 +74,20 @@ final class ScanCoordinator {
     /// would be marked complete and lose its country permanently, which quietly
     /// breaks the "vu ici" markers and the "pays visités" count.
     func processQueue() async {
-        guard !isProcessing else { return }
+        guard !isProcessing else {
+            rerunRequested = true
+            return
+        }
         isProcessing = true
         defer { isProcessing = false }
+        repeat {
+            rerunRequested = false
+            await drainQueue()
+        } while rerunRequested
+    }
 
+    /// One pass over every sighting that still needs something.
+    private func drainQueue() async {
         let all = (try? context.fetch(FetchDescriptor<Sighting>())) ?? []
 
         for sighting in all where sighting.needsGeocoding {

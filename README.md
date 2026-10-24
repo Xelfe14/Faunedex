@@ -1,8 +1,9 @@
 # 🌿 Flaunedex
 
-Three apps in one, sharing a design language, a store and a single Gemini key. The app opens on a
-home screen that shows the three side by side; each has its own tab bar, and its first tab,
-**Accueil**, comes back home.
+Three apps in one, sharing a design language, a store and a single Gemini key. A bar across the top
+of every screen switches between them in one tap, each in its own colour (green, paprika, blue), with
+Réglages behind the gear at its end. Each app has its own tab bar, and stays as it was left when you
+switch away and back.
 
 **Faune & Flore** is a personal Pokédex for European wildlife. Photograph a plant or animal in the
 field, and Google **Gemini** identifies it and writes a readable French card (a *spécificité* + a
@@ -106,8 +107,9 @@ xcrun simctl launch booted com.taddeocarpinelli.flaunedex -seedSampleData
 That seeds four species, three recipes and four knowledge cards, with live Wikimedia images.
 
 Add `-previewSpeciesDetail` or `-previewRecipeDetail` to open a card directly, or `-previewScreen`
-with one of `accueil nature faune flore carte journal stats decouvertes reglages cuisine demander
-saisons produit impact fiches fiche apprendre reviser` to jump to any screen. Set these under **Product → Scheme → Edit Scheme → Arguments** to
+with one of `nature cuisine savoirs reviser pastille` (the whole app, switcher included) or `faune
+flore carte sans-position journal stats decouvertes reglages demander saisons produit impact fiches
+fiche apprendre` (one screen) to jump to it. Set these under **Product → Scheme → Edit Scheme → Arguments** to
 use them from Xcode. They are compiled out of Release builds.
 
 In Xcode:
@@ -118,8 +120,8 @@ In Xcode:
    change them in `project.yml`, `App/Info.plist`, and `App/Flaunedex.entitlements` together).
 2. Run on the **Simulator** to click through the UI (simulate a location via **Features → Location**).
    The camera only works on a **real device**.
-3. Launch on your iPhone, tap the gear on the home screen (**Réglages**), paste your Gemini key, then
-   open Faune & Flore and use **Capturer**.
+3. Launch on your iPhone, tap the gear at the top right (**Réglages**), paste your Gemini key, then
+   use **Capturer** in Faune & Flore.
 
 > **iOS version:** the project targets **iOS 17** for broad compatibility. The plan documents the
 > iOS 26 APIs (`MKReverseGeocodingRequest`, `BGContinuedProcessingTask`) you can adopt later — each is
@@ -154,8 +156,14 @@ iPhone selected. Reinstalling over the app keeps everything it holds.
 5. Assembled into a `Species` and linked to your `Sighting`. New species → a "Nouvelle espèce !"
    celebration.
 
-Offline, the capture is saved with its GPS immediately and the whole pipeline runs later when the
-network returns (`NWPathMonitor`-driven queue).
+The shutter never waits. The GPS warms up while the camera is open and the photo takes the latest
+fix; if there is none yet, the photo is saved at once and the position is attached when the GPS finds
+it. The app then goes back to the tab you came from, and a pill above the tab bar follows the
+identification to its result: open the species, choose between candidates, or retry. A photo that
+still has no position is counted above the map, with a picker to place it by hand.
+
+Offline, the capture is saved immediately and the whole pipeline runs later when the network returns
+(`NWPathMonitor`-driven queue).
 
 ---
 
@@ -260,7 +268,7 @@ is planned for a future version.
   with its season, footprint and the recipes that use it; season pictograms and a carbon footprint on
   every recipe; seasonal cooking by default; and lower-impact versions. Seen running in the iOS 26
   simulator through CI's screenshots (an artifact on every run); not yet on the iPhone.
-- ✅ Three apps in one: the home screen, the three tab bars, and Savoirs (cards from Gemini or by
+- ✅ Three apps in one: the coloured app switcher on every screen, the three tab bars, and Savoirs (cards from Gemini or by
   hand, themes, search, favourites, editing, Gemini amendments, flashcard review with a due-count
   badge). Built on Xcode 16.4 and 26 and seen in CI's screenshots; not yet on the iPhone.
 - ✅ Verified live: Wikipedia/Commons image lookup, GBIF nearby suggestions, and batched Wikidata
