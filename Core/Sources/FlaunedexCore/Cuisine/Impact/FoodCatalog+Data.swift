@@ -26,6 +26,16 @@ extension FoodCatalog {
             unitGrams: [.clove: 5.0]
         ),
         Food(
+            id: "produce:amandefraiche", name: "Amande fraîche",
+            aliases: ["amande fraiche"],
+            kgCO2ePerKg: 2.63,
+            source: "Agribalyse 3.2 : Amande (avec peau)",
+            produceID: "amandefraiche",
+            gramsPerPiece: 1.2,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
             id: "produce:ananas", name: "Ananas",
             aliases: ["ananas"],
             kgCO2ePerKg: 1.3614,
@@ -116,6 +126,16 @@ extension FoodCatalog {
             unitGrams: [:]
         ),
         Food(
+            id: "produce:butternut", name: "Butternut",
+            aliases: ["butternut", "courge butternut", "doubeurre"],
+            kgCO2ePerKg: 0.639,
+            source: "Agribalyse 3.2 : Courge doubeurre (butternut), pulpe, crue",
+            produceID: "butternut",
+            gramsPerPiece: 1200.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
             id: "produce:carambole", name: "Carambole",
             aliases: ["carambole"],
             kgCO2ePerKg: 0.5535,
@@ -156,8 +176,18 @@ extension FoodCatalog {
             unitGrams: [:]
         ),
         Food(
+            id: "produce:chicoreefrisee", name: "Chicorée frisée",
+            aliases: ["chicoree frisee", "frisee", "salade frisee", "chicoree"],
+            kgCO2ePerKg: 0.571,
+            source: "Agribalyse 3.2 : Salade ou chicorée frisée, crue",
+            produceID: "chicoreefrisee",
+            gramsPerPiece: 400.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
             id: "produce:chou", name: "Chou",
-            aliases: ["chou", "chou vert", "chou blanc", "chou rouge", "chou frise", "chou pointu"],
+            aliases: ["chou", "chou vert", "chou blanc", "chou frise", "chou pointu", "chou de milan"],
             kgCO2ePerKg: 0.8476,
             source: "Impact CO2 (ADEME) : Chou",
             produceID: "chou",
@@ -172,6 +202,26 @@ extension FoodCatalog {
             source: "Impact CO2 (ADEME) : Chou de Bruxelles",
             produceID: "choudebruxelles",
             gramsPerPiece: 15.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
+            id: "produce:choukale", name: "Chou kale",
+            aliases: ["chou kale", "kale"],
+            kgCO2ePerKg: 0.713,
+            source: "Agribalyse 3.2 : Chou frisé, cru",
+            produceID: "choukale",
+            gramsPerPiece: 200.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
+            id: "produce:chourouge", name: "Chou rouge",
+            aliases: ["chou rouge"],
+            kgCO2ePerKg: 0.905,
+            source: "Agribalyse 3.2 : Chou rouge, cru",
+            produceID: "chourouge",
+            gramsPerPiece: 1000.0,
             gramsPerMilliliter: 1,
             unitGrams: [:]
         ),
@@ -237,7 +287,7 @@ extension FoodCatalog {
         ),
         Food(
             id: "produce:courge", name: "Courge",
-            aliases: ["courge", "butternut", "courge butternut", "potimarron", "courge musquee"],
+            aliases: ["courge", "courge musquee"],
             kgCO2ePerKg: 0.6382,
             source: "Impact CO2 (ADEME) : Courge",
             produceID: "courge",
@@ -316,6 +366,16 @@ extension FoodCatalog {
             unitGrams: [:]
         ),
         Food(
+            id: "produce:figuedebarbarie", name: "Figue de Barbarie",
+            aliases: ["figue de barbarie"],
+            kgCO2ePerKg: 0.387,
+            source: "Agribalyse 3.2 : Figue de Barbarie, pulpe et graines, crue",
+            produceID: "figuedebarbarie",
+            gramsPerPiece: 100.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
             id: "produce:fraise", name: "Fraise",
             aliases: ["fraise"],
             kgCO2ePerKg: 0.5111,
@@ -342,6 +402,16 @@ extension FoodCatalog {
             source: "Impact CO2 (ADEME) : Fruit de la passion",
             produceID: "fruitdelapassion",
             gramsPerPiece: 40.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
+            id: "produce:feve", name: "Fève",
+            aliases: ["feve", "feve fraiche"],
+            kgCO2ePerKg: 0.858,
+            source: "Agribalyse 3.2 : Fève à écosser, fraîche",
+            produceID: "feve",
+            gramsPerPiece: nil,
             gramsPerMilliliter: 1,
             unitGrams: [:]
         ),
@@ -566,6 +636,16 @@ extension FoodCatalog {
             unitGrams: [:]
         ),
         Food(
+            id: "produce:oseille", name: "Oseille",
+            aliases: ["oseille"],
+            kgCO2ePerKg: 0.571,
+            source: "Agribalyse 3.2 : Oseille, crue",
+            produceID: "oseille",
+            gramsPerPiece: nil,
+            gramsPerMilliliter: 1,
+            unitGrams: [.bunch: 100.0]
+        ),
+        Food(
             id: "produce:pamplemousse", name: "Pamplemousse",
             aliases: ["pamplemousse", "pomelo"],
             kgCO2ePerKg: 0.9256,
@@ -592,6 +672,16 @@ extension FoodCatalog {
             source: "Impact CO2 (ADEME) : Pastèque",
             produceID: "pasteque",
             gramsPerPiece: 4000.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
+            id: "produce:patatedouce", name: "Patate douce",
+            aliases: ["patate douce"],
+            kgCO2ePerKg: 0.334,
+            source: "Agribalyse 3.2 : Patate douce, crue",
+            produceID: "patatedouce",
+            gramsPerPiece: 300.0,
             gramsPerMilliliter: 1,
             unitGrams: [:]
         ),
@@ -642,6 +732,16 @@ extension FoodCatalog {
             source: "Impact CO2 (ADEME) : Pomme",
             produceID: "pomme",
             gramsPerPiece: 150.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
+            id: "produce:potimarron", name: "Potimarron",
+            aliases: ["potimarron"],
+            kgCO2ePerKg: 0.612,
+            source: "Agribalyse 3.2 : Potimarron, pulpe, cru",
+            produceID: "potimarron",
+            gramsPerPiece: 1200.0,
             gramsPerMilliliter: 1,
             unitGrams: [:]
         ),
@@ -716,12 +816,32 @@ extension FoodCatalog {
             unitGrams: [:]
         ),
         Food(
+            id: "produce:rutabaga", name: "Rutabaga",
+            aliases: ["rutabaga"],
+            kgCO2ePerKg: 0.494,
+            source: "Agribalyse 3.2 : Rutabaga, cru",
+            produceID: "rutabaga",
+            gramsPerPiece: 500.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
             id: "produce:salsifis", name: "Salsifis",
             aliases: ["salsifis"],
             kgCO2ePerKg: 0.4943,
             source: "Impact CO2 (ADEME) : Salsifis",
             produceID: "salsifis",
             gramsPerPiece: 60.0,
+            gramsPerMilliliter: 1,
+            unitGrams: [:]
+        ),
+        Food(
+            id: "produce:scarole", name: "Scarole",
+            aliases: ["scarole", "salade scarole"],
+            kgCO2ePerKg: 1.03,
+            source: "Agribalyse 3.2 : Scarole, crue",
+            produceID: "scarole",
+            gramsPerPiece: 400.0,
             gramsPerMilliliter: 1,
             unitGrams: [:]
         ),
@@ -1580,16 +1700,6 @@ extension FoodCatalog {
             unitGrams: [:]
         ),
         Food(
-            id: "feve", name: "Fèves",
-            aliases: ["feve"],
-            kgCO2ePerKg: 0.858,
-            source: "Agribalyse 3.2 : Fève à écosser, fraîche",
-            produceID: nil,
-            gramsPerPiece: nil,
-            gramsPerMilliliter: 1.0,
-            unitGrams: [:]
-        ),
-        Food(
             id: "tofu", name: "Tofu",
             aliases: ["tofu", "tofu ferme", "tofu soyeux"],
             kgCO2ePerKg: 1.0,
@@ -1616,16 +1726,6 @@ extension FoodCatalog {
             source: "Agribalyse 3.2 : Pomme de terre nouvelle, crue",
             produceID: nil,
             gramsPerPiece: 60.0,
-            gramsPerMilliliter: 1.0,
-            unitGrams: [:]
-        ),
-        Food(
-            id: "patate-douce", name: "Patate douce",
-            aliases: ["patate douce"],
-            kgCO2ePerKg: 0.334,
-            source: "Agribalyse 3.2 : Patate douce, crue",
-            produceID: nil,
-            gramsPerPiece: 300.0,
             gramsPerMilliliter: 1.0,
             unitGrams: [:]
         ),

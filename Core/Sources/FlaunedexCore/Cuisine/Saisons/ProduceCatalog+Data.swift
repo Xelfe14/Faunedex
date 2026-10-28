@@ -3,7 +3,8 @@
 
 extension ProduceCatalog {
     /// Impact CO2 (ADEME) seasonal calendar and footprints, Agribalyse 3.2,
-    /// Licence Ouverte 2.0; Southern Europe months, far imports and notes curated.
+    /// Licence Ouverte 2.0, completed from Interfel's calendar; Southern Europe
+    /// months, far imports and notes curated.
     public static let all: [Produce] = [
         Produce(
             id: "abricot", name: "Abricot",
@@ -14,7 +15,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 1.4515
+            kgCO2ePerKg: 1.4515,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "ail", name: "Ail",
@@ -25,7 +28,22 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne",
             note: nil,
-            kgCO2ePerKg: 0.3835
+            kgCO2ePerKg: 0.3835,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "amandefraiche", name: "Amande fraîche",
+            category: .nut,
+            franceMonths: [9, 10],
+            europeMonths: [],
+            availableMonths: [9, 10],
+            farImport: false,
+            origins: nil,
+            note: "La saison des amandes fraîches ; sèches, elles se gardent toute l'année.",
+            kgCO2ePerKg: 2.63,
+            seasonSource: "Calendrier Interfel (Amande)",
+            footprintSource: "Agribalyse 3.2 : Amande (avec peau)"
         ),
         Produce(
             id: "ananas", name: "Ananas",
@@ -36,7 +54,9 @@ extension ProduceCatalog {
             farImport: true,
             origins: nil,
             note: "Presque toujours importé de loin (Costa Rica, Côte d'Ivoire) ; les Açores en produisent un peu.",
-            kgCO2ePerKg: 1.3614
+            kgCO2ePerKg: 1.3614,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "artichaut", name: "Artichaut",
@@ -47,7 +67,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Italie, Espagne",
             note: nil,
-            kgCO2ePerKg: 2.5562
+            kgCO2ePerKg: 2.5562,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "asperge", name: "Asperge",
@@ -58,7 +80,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Grèce",
             note: nil,
-            kgCO2ePerKg: 1.6389
+            kgCO2ePerKg: 1.6389,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "aubergine", name: "Aubergine",
@@ -69,7 +93,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne (sous abri)",
             note: nil,
-            kgCO2ePerKg: 0.472
+            kgCO2ePerKg: 0.472,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "avocat", name: "Avocat",
@@ -80,7 +106,9 @@ extension ProduceCatalog {
             farImport: true,
             origins: "Espagne (Málaga), Portugal (Algarve)",
             note: "De juin à septembre, importé de loin (Pérou, Kenya).",
-            kgCO2ePerKg: 1.5525
+            kgCO2ePerKg: 1.5525,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "banane", name: "Banane",
@@ -91,7 +119,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Canaries (Espagne), Madère (Portugal)",
             note: "Aussi cultivée aux Antilles françaises, mais loin d'ici.",
-            kgCO2ePerKg: 0.9085
+            kgCO2ePerKg: 0.9085,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "betterave", name: "Betterave",
@@ -102,7 +132,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.4074
+            kgCO2ePerKg: 0.4074,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "blette", name: "Blette",
@@ -113,7 +145,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.5811
+            kgCO2ePerKg: 0.5811,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "brocoli", name: "Brocoli",
@@ -124,7 +158,22 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne (Murcie)",
             note: nil,
-            kgCO2ePerKg: 0.9507
+            kgCO2ePerKg: 0.9507,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "butternut", name: "Butternut",
+            category: .vegetable,
+            franceMonths: [1, 2, 10, 11, 12],
+            europeMonths: [],
+            availableMonths: [1, 2, 10, 11, 12],
+            farImport: false,
+            origins: nil,
+            note: "Saison des courges et potirons dans le calendrier Interfel.",
+            kgCO2ePerKg: 0.639,
+            seasonSource: "Calendrier Interfel (Courges et potirons)",
+            footprintSource: "Agribalyse 3.2 : Courge doubeurre (butternut), pulpe, crue"
         ),
         Produce(
             id: "carambole", name: "Carambole",
@@ -135,7 +184,9 @@ extension ProduceCatalog {
             farImport: true,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.5535
+            kgCO2ePerKg: 0.5535,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "carotte", name: "Carotte",
@@ -146,7 +197,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 0.3961
+            kgCO2ePerKg: 0.3961,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "cassis", name: "Cassis",
@@ -157,7 +210,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 1.9035
+            kgCO2ePerKg: 1.9035,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "cerise", name: "Cerise",
@@ -168,7 +223,22 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 1.7445
+            kgCO2ePerKg: 1.7445,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "chicoreefrisee", name: "Chicorée frisée",
+            category: .vegetable,
+            franceMonths: [1, 2, 10, 11, 12],
+            europeMonths: [],
+            availableMonths: [1, 2, 10, 11, 12],
+            farImport: false,
+            origins: nil,
+            note: nil,
+            kgCO2ePerKg: 0.571,
+            seasonSource: "Calendrier Interfel (Chicorée)",
+            footprintSource: "Agribalyse 3.2 : Salade ou chicorée frisée, crue"
         ),
         Produce(
             id: "chou", name: "Chou",
@@ -179,7 +249,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.8476
+            kgCO2ePerKg: 0.8476,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "choudebruxelles", name: "Chou de Bruxelles",
@@ -190,7 +262,35 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.5621
+            kgCO2ePerKg: 0.5621,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "choukale", name: "Chou kale",
+            category: .vegetable,
+            franceMonths: [1, 2, 3, 10, 11, 12],
+            europeMonths: [],
+            availableMonths: [1, 2, 3, 10, 11, 12],
+            farImport: false,
+            origins: nil,
+            note: nil,
+            kgCO2ePerKg: 0.713,
+            seasonSource: "Calendrier Interfel (Chou kale)",
+            footprintSource: "Agribalyse 3.2 : Chou frisé, cru"
+        ),
+        Produce(
+            id: "chourouge", name: "Chou rouge",
+            category: .vegetable,
+            franceMonths: [1, 2, 10, 11, 12],
+            europeMonths: [],
+            availableMonths: [1, 2, 10, 11, 12],
+            farImport: false,
+            origins: nil,
+            note: nil,
+            kgCO2ePerKg: 0.905,
+            seasonSource: "Calendrier Interfel (Chou rouge)",
+            footprintSource: "Agribalyse 3.2 : Chou rouge, cru"
         ),
         Produce(
             id: "choufleur", name: "Chou-fleur",
@@ -201,7 +301,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 0.7207
+            kgCO2ePerKg: 0.7207,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "chataigne", name: "Châtaigne",
@@ -212,7 +314,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Italie, Portugal, Espagne",
             note: nil,
-            kgCO2ePerKg: 1.9439
+            kgCO2ePerKg: 1.9439,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "citron", name: "Citron",
@@ -223,7 +327,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 0.7636
+            kgCO2ePerKg: 0.7636,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "clementine", name: "Clémentine",
@@ -234,7 +340,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Corse",
             note: nil,
-            kgCO2ePerKg: 1.3019
+            kgCO2ePerKg: 1.3019,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "coing", name: "Coing",
@@ -245,7 +353,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Portugal",
             note: nil,
-            kgCO2ePerKg: 0.5615
+            kgCO2ePerKg: 0.5615,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "concombre", name: "Concombre",
@@ -256,7 +366,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne (sous abri)",
             note: nil,
-            kgCO2ePerKg: 0.5123
+            kgCO2ePerKg: 0.5123,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "courge", name: "Courge",
@@ -267,7 +379,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.6382
+            kgCO2ePerKg: 0.6382,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "courgette", name: "Courgette",
@@ -278,7 +392,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne (sous abri)",
             note: nil,
-            kgCO2ePerKg: 0.4985
+            kgCO2ePerKg: 0.4985,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "cresson", name: "Cresson",
@@ -289,7 +405,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.8681
+            kgCO2ePerKg: 0.8681,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "celeri", name: "Céleri",
@@ -300,7 +418,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.7157
+            kgCO2ePerKg: 0.7157,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "datte", name: "Datte",
@@ -311,7 +431,9 @@ extension ProduceCatalog {
             farImport: true,
             origins: nil,
             note: "Vient surtout de Tunisie et d'Algérie.",
-            kgCO2ePerKg: 2.8928
+            kgCO2ePerKg: 2.8928,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "endive", name: "Endive",
@@ -322,7 +444,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.861
+            kgCO2ePerKg: 0.861,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "fenouil", name: "Fenouil",
@@ -333,7 +457,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Italie",
             note: nil,
-            kgCO2ePerKg: 1.0182
+            kgCO2ePerKg: 1.0182,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "figue", name: "Figue",
@@ -344,7 +470,22 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie, Grèce",
             note: nil,
-            kgCO2ePerKg: 0.6115
+            kgCO2ePerKg: 0.6115,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "figuedebarbarie", name: "Figue de Barbarie",
+            category: .fruit,
+            franceMonths: [],
+            europeMonths: [8, 9, 10],
+            availableMonths: [8, 9, 10],
+            farImport: false,
+            origins: "Italie (Sicile), Espagne",
+            note: nil,
+            kgCO2ePerKg: 0.387,
+            seasonSource: "Calendrier Interfel (Figue de Barbarie)",
+            footprintSource: "Agribalyse 3.2 : Figue de Barbarie, pulpe et graines, crue"
         ),
         Produce(
             id: "fraise", name: "Fraise",
@@ -355,7 +496,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne (Huelva)",
             note: nil,
-            kgCO2ePerKg: 0.5111
+            kgCO2ePerKg: 0.5111,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "framboise", name: "Framboise",
@@ -366,7 +509,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Portugal (sous abri)",
             note: nil,
-            kgCO2ePerKg: 1.5431
+            kgCO2ePerKg: 1.5431,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "fruitdelapassion", name: "Fruit de la passion",
@@ -377,7 +522,22 @@ extension ProduceCatalog {
             farImport: true,
             origins: nil,
             note: "Madère en produit un peu ; le reste vient de loin.",
-            kgCO2ePerKg: 0.9376
+            kgCO2ePerKg: 0.9376,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "feve", name: "Fève",
+            category: .vegetable,
+            franceMonths: [5, 6],
+            europeMonths: [],
+            availableMonths: [5, 6],
+            farImport: false,
+            origins: nil,
+            note: nil,
+            kgCO2ePerKg: 0.858,
+            seasonSource: "Calendrier Interfel (Fève)",
+            footprintSource: "Agribalyse 3.2 : Fève à écosser, fraîche"
         ),
         Produce(
             id: "grenade", name: "Grenade",
@@ -388,7 +548,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne",
             note: nil,
-            kgCO2ePerKg: 0.4985
+            kgCO2ePerKg: 0.4985,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "groseille", name: "Groseille",
@@ -399,7 +561,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 1.8945
+            kgCO2ePerKg: 1.8945,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "haricotvert", name: "Haricot vert (cru)",
@@ -410,7 +574,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne (sous abri)",
             note: nil,
-            kgCO2ePerKg: 0.4465
+            kgCO2ePerKg: 0.4465,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "kaki", name: "Kaki",
@@ -421,7 +587,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne",
             note: nil,
-            kgCO2ePerKg: 0.9495
+            kgCO2ePerKg: 0.9495,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "kiwi", name: "Kiwi",
@@ -432,7 +600,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Italie, Grèce, Portugal",
             note: nil,
-            kgCO2ePerKg: 1.0015
+            kgCO2ePerKg: 1.0015,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "laitue", name: "Laitue",
@@ -443,7 +613,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne (Murcie)",
             note: nil,
-            kgCO2ePerKg: 0.8681
+            kgCO2ePerKg: 0.8681,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "mandarine", name: "Mandarine",
@@ -454,7 +626,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne",
             note: nil,
-            kgCO2ePerKg: 0.4684
+            kgCO2ePerKg: 0.4684,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "mangue", name: "Mangue (avion)",
@@ -465,7 +639,9 @@ extension ProduceCatalog {
             farImport: true,
             origins: nil,
             note: "Le fret aérien multiplie son empreinte par seize.",
-            kgCO2ePerKg: 11.6555
+            kgCO2ePerKg: 11.6555,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "manguebateau", name: "Mangue (bateau)",
@@ -476,7 +652,9 @@ extension ProduceCatalog {
             farImport: true,
             origins: "Espagne (Málaga)",
             note: "Le reste de l'année, importée de loin par bateau.",
-            kgCO2ePerKg: 0.7275
+            kgCO2ePerKg: 0.7275,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "mais", name: "Maïs",
@@ -487,7 +665,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.5688
+            kgCO2ePerKg: 0.5688,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "melon", name: "Melon",
@@ -498,7 +678,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne",
             note: nil,
-            kgCO2ePerKg: 0.9783
+            kgCO2ePerKg: 0.9783,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "champignonmorille", name: "Morille",
@@ -509,7 +691,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 6.175
+            kgCO2ePerKg: 6.175,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "myrtille", name: "Myrtille",
@@ -520,7 +704,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Portugal",
             note: nil,
-            kgCO2ePerKg: 0.9216
+            kgCO2ePerKg: 0.9216,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "mache", name: "Mâche",
@@ -531,7 +717,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.8681
+            kgCO2ePerKg: 0.8681,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "mure", name: "Mûre",
@@ -542,7 +730,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 1.2475
+            kgCO2ePerKg: 1.2475,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "navet", name: "Navet",
@@ -553,7 +743,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.3961
+            kgCO2ePerKg: 0.3961,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "nectarine", name: "Nectarine",
@@ -564,7 +756,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 0.6136
+            kgCO2ePerKg: 0.6136,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "noisette", name: "Noisette",
@@ -575,7 +769,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 4.8112
+            kgCO2ePerKg: 4.8112,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "noix", name: "Noix",
@@ -586,7 +782,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 4.114
+            kgCO2ePerKg: 4.114,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "noixdecoco", name: "Noix de coco",
@@ -597,7 +795,9 @@ extension ProduceCatalog {
             farImport: true,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 2.4109
+            kgCO2ePerKg: 2.4109,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "oignon", name: "Oignon",
@@ -608,7 +808,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne",
             note: nil,
-            kgCO2ePerKg: 0.4205
+            kgCO2ePerKg: 0.4205,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "orange", name: "Orange",
@@ -619,7 +821,22 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 0.6777
+            kgCO2ePerKg: 0.6777,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "oseille", name: "Oseille",
+            category: .vegetable,
+            franceMonths: [5, 6, 7, 8, 9, 10],
+            europeMonths: [],
+            availableMonths: [5, 6, 7, 8, 9, 10],
+            farImport: false,
+            origins: nil,
+            note: nil,
+            kgCO2ePerKg: 0.571,
+            seasonSource: "Calendrier Interfel (Oseille)",
+            footprintSource: "Agribalyse 3.2 : Oseille, crue"
         ),
         Produce(
             id: "pamplemousse", name: "Pamplemousse",
@@ -630,7 +847,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Corse",
             note: nil,
-            kgCO2ePerKg: 0.9256
+            kgCO2ePerKg: 0.9256,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "panais", name: "Panais",
@@ -641,7 +860,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.4943
+            kgCO2ePerKg: 0.4943,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "pasteque", name: "Pastèque",
@@ -652,7 +873,22 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 0.6805
+            kgCO2ePerKg: 0.6805,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "patatedouce", name: "Patate douce",
+            category: .vegetable,
+            franceMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+            europeMonths: [],
+            availableMonths: [1, 2, 3, 4, 5, 9, 10, 11, 12],
+            farImport: false,
+            origins: nil,
+            note: "Un peu cultivée en France ; une grande part vient d'Espagne, du Portugal ou de plus loin.",
+            kgCO2ePerKg: 0.334,
+            seasonSource: "Calendrier Interfel (Patate douce)",
+            footprintSource: "Agribalyse 3.2 : Patate douce, crue"
         ),
         Produce(
             id: "petitpois", name: "Petit pois",
@@ -663,7 +899,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 0.7018
+            kgCO2ePerKg: 0.7018,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "poire", name: "Poire",
@@ -674,7 +912,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Italie, Espagne, Portugal",
             note: nil,
-            kgCO2ePerKg: 0.3873
+            kgCO2ePerKg: 0.3873,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "poireau", name: "Poireau",
@@ -685,7 +925,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.6114
+            kgCO2ePerKg: 0.6114,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "poivron", name: "Poivron",
@@ -696,7 +938,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne (sous abri)",
             note: nil,
-            kgCO2ePerKg: 0.7154
+            kgCO2ePerKg: 0.7154,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "pomme", name: "Pomme",
@@ -707,7 +951,22 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Italie (Trentin, Haut-Adige)",
             note: nil,
-            kgCO2ePerKg: 0.4082
+            kgCO2ePerKg: 0.4082,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "potimarron", name: "Potimarron",
+            category: .vegetable,
+            franceMonths: [1, 2, 10, 11, 12],
+            europeMonths: [],
+            availableMonths: [1, 2, 10, 11, 12],
+            farImport: false,
+            origins: nil,
+            note: "Saison des courges et potirons dans le calendrier Interfel.",
+            kgCO2ePerKg: 0.612,
+            seasonSource: "Calendrier Interfel (Courges et potirons)",
+            footprintSource: "Agribalyse 3.2 : Potimarron, pulpe, cru"
         ),
         Produce(
             id: "potiron", name: "Potiron",
@@ -718,7 +977,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.6382
+            kgCO2ePerKg: 0.6382,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "prune", name: "Prune",
@@ -729,7 +990,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 1.0345
+            kgCO2ePerKg: 1.0345,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "peche", name: "Pêche",
@@ -740,7 +1003,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie",
             note: nil,
-            kgCO2ePerKg: 0.5905
+            kgCO2ePerKg: 0.5905,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "radis", name: "Radis",
@@ -751,7 +1016,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.3847
+            kgCO2ePerKg: 0.3847,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "raisin", name: "Raisin",
@@ -762,7 +1029,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Italie, Espagne",
             note: nil,
-            kgCO2ePerKg: 0.5093
+            kgCO2ePerKg: 0.5093,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "reineclaude", name: "Reine claude",
@@ -773,7 +1042,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 1.0435
+            kgCO2ePerKg: 1.0435,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "rhubarbe", name: "Rhubarbe",
@@ -784,7 +1055,22 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.7015
+            kgCO2ePerKg: 0.7015,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "rutabaga", name: "Rutabaga",
+            category: .vegetable,
+            franceMonths: [1, 2, 3, 4, 10, 11, 12],
+            europeMonths: [],
+            availableMonths: [1, 2, 3, 4, 10, 11, 12],
+            farImport: false,
+            origins: nil,
+            note: nil,
+            kgCO2ePerKg: 0.494,
+            seasonSource: "Calendrier Interfel (Rutabaga)",
+            footprintSource: "Agribalyse 3.2 : Rutabaga, cru"
         ),
         Produce(
             id: "salsifis", name: "Salsifis",
@@ -795,7 +1081,22 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.4943
+            kgCO2ePerKg: 0.4943,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
+        ),
+        Produce(
+            id: "scarole", name: "Scarole",
+            category: .vegetable,
+            franceMonths: [1, 2, 10, 11, 12],
+            europeMonths: [],
+            availableMonths: [1, 2, 10, 11, 12],
+            farImport: false,
+            origins: nil,
+            note: nil,
+            kgCO2ePerKg: 1.03,
+            seasonSource: "Calendrier Interfel (Chicorée)",
+            footprintSource: "Agribalyse 3.2 : Scarole, crue"
         ),
         Produce(
             id: "tomate", name: "Tomate",
@@ -806,7 +1107,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: "Espagne, Italie (sous abri l'hiver)",
             note: nil,
-            kgCO2ePerKg: 0.6256
+            kgCO2ePerKg: 0.6256,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "topinambour", name: "Topinambour",
@@ -817,7 +1120,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.4913
+            kgCO2ePerKg: 0.4913,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "echalote", name: "Échalote",
@@ -828,7 +1133,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.3936
+            kgCO2ePerKg: 0.3936,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
         Produce(
             id: "epinard", name: "Épinard",
@@ -839,7 +1146,9 @@ extension ProduceCatalog {
             farImport: false,
             origins: nil,
             note: nil,
-            kgCO2ePerKg: 0.4226
+            kgCO2ePerKg: 0.4226,
+            seasonSource: "Calendrier de l’ADEME (Impact CO2)",
+            footprintSource: "Impact CO2 (ADEME), Agribalyse 3.2"
         ),
     ]
 }

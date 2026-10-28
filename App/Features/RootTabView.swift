@@ -240,6 +240,10 @@ struct RootTabView: View {
             if let tomato = ProduceCatalog.produce(id: "tomate") {
                 NavigationStack { ProduceDetailView(produce: tomato) }
             }
+        case "kale":
+            if let kale = ProduceCatalog.produce(id: "choukale") {
+                NavigationStack { ProduceDetailView(produce: kale) }
+            }
         case "impact":
             // The footprint section alone, on the sample recipe with the most
             // to say: a heavy meat, and an ingredient with no data.

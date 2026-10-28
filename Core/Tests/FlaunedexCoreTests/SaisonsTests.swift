@@ -127,3 +127,46 @@ struct SaisonsTests {
         #expect(!free.contains("saison"))
     }
 }
+
+/// The products completed from Interfel's calendar, each with a footprint
+/// from Agribalyse: real data on both counts, and named as such.
+struct InterfelAdditionsTests {
+
+    @Test func kaleHasItsWinterSeasonAndRealSources() throws {
+        let kale = try #require(ProduceCatalog.produce(id: "choukale"))
+        #expect(kale.name == "Chou kale")
+        #expect(kale.franceMonths == [1, 2, 3, 10, 11, 12])
+        #expect(kale.status(in: 11) == .france)
+        #expect(kale.status(in: 7) == .outOfSeason)
+        #expect(kale.seasonSource == "Calendrier Interfel (Chou kale)")
+        #expect(kale.footprintSource == "Agribalyse 3.2 : Chou frisé, cru")
+        #expect(abs(kale.kgCO2ePerKg - 0.713) < 0.001)
+    }
+
+    @Test func theAddedProductsAreAllThere() {
+        for id in ["choukale", "chourouge", "rutabaga", "butternut", "potimarron", "chicoreefrisee",
+                   "scarole", "feve", "oseille", "patatedouce", "figuedebarbarie", "amandefraiche"] {
+            #expect(ProduceCatalog.produce(id: id) != nil, "\(id)")
+        }
+        #expect(ProduceCatalog.all.count == 88)
+    }
+
+    @Test func everyProductNamesItsSources() {
+        for produce in ProduceCatalog.all {
+            #expect(!produce.seasonSource.isEmpty, "\(produce.id)")
+            #expect(!produce.footprintSource.isEmpty, "\(produce.id)")
+        }
+        let fromInterfel = ProduceCatalog.all.filter { $0.seasonSource.contains("Interfel") }
+        #expect(fromInterfel.count == 12)
+        for produce in fromInterfel {
+            #expect(!produce.farImport, "only products found in Europe were added: \(produce.id)")
+            #expect(produce.footprintSource.hasPrefix("Agribalyse 3.2 : "), "\(produce.id)")
+        }
+    }
+
+    @Test func pricklyPearsComeFromSouthernEuropeNotFrance() throws {
+        let pear = try #require(ProduceCatalog.produce(id: "figuedebarbarie"))
+        #expect(pear.franceMonths.isEmpty)
+        #expect(pear.status(in: 9) == .europe)
+    }
+}

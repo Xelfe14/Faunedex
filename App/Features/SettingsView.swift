@@ -61,7 +61,7 @@ struct SettingsView: View {
                 Text("Taxonomie & répartition : GBIF.")
                 Text("Noms & statut : Wikidata. Images : Wikimedia Commons. Chants : Xeno-canto.")
                 Text("Recettes et fiches : Google Gemini. Photos des plats et images des fiches : Wikipédia et Wikimedia Commons.")
-                Text("Saisons et empreinte carbone : ADEME (Impact CO2, Agribalyse 3.2), Licence Ouverte 2.0.")
+                Text("Saisons et empreinte carbone : ADEME (Impact CO2, Agribalyse 3.2), Licence Ouverte 2.0, et calendrier d'Interfel.")
                 Text("Les identifications, recettes et fiches écrites par IA peuvent se tromper ; ne consommez ou ne manipulez jamais une espèce sur cette seule base.")
                     .font(.caption).foregroundStyle(.secondary)
             }

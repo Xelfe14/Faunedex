@@ -22,6 +22,21 @@ struct FoodImpactTests {
         #expect(id("crème de marrons") == "creme-marrons")
     }
 
+    @Test func cabbagesAndSquashesFindTheirOwnRow() {
+        #expect(id("chou rouge") == "produce:chourouge")
+        #expect(id("chou kale") == "produce:choukale")
+        #expect(id("kale") == "produce:choukale")
+        #expect(id("chou frisé") == "produce:chou", "in a recipe, a chou frisé is usually a savoy cabbage")
+        #expect(id("chou") == "produce:chou")
+        #expect(id("potimarron") == "produce:potimarron")
+        #expect(id("courge butternut") == "produce:butternut")
+        #expect(id("courge") == "produce:courge")
+        #expect(id("figues de Barbarie") == "produce:figuedebarbarie")
+        #expect(id("figues") == "produce:figue")
+        #expect(id("amandes fraîches") == "produce:amandefraiche")
+        #expect(id("poudre d'amande") == "amande")
+    }
+
     @Test func readsRecipeSpelling() {
         #expect(id("Œufs") == "oeuf")
         #expect(id("jaunes d'œufs") == "jaune-oeuf")

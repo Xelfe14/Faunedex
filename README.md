@@ -15,7 +15,7 @@ ingredients, and step-by-step instructions, with every amount in grams, millilit
 Celsius. Then make it yours: add your own notes, delete what you do not want, rescale it for a
 different table, or rewrite the whole thing as free text.
 
-**Saisons**, inside Cuisine, is the year as a fresque: every fruit and vegetable ADEME tracks, twelve
+**Saisons**, inside Cuisine, is the year as a fresque: 88 fruits and vegetables (ADEME's 76, completed from Interfel's calendar), twelve
 months across, coloured by where it comes from each month seen from Paris (France, Southern Europe,
 or far away). Every recipe shows its carbon footprint, flags the ingredients that are out of season,
 and can ask Gemini for a lower-impact version. Asking for a recipe cooks with the season by default.
@@ -42,7 +42,7 @@ Flaunedex/
 │  │   ├─ GBIF/               Unit-tested on macOS.
 │  │   ├─ Enrichment/
 │  │   ├─ Cuisine/            Recipe units, prompt + schema, text format, dish photos,
-│  │   │   ├─ Saisons/          the seasonal calendar (generated from ADEME data)
+│  │   │   ├─ Saisons/          the seasonal calendar (generated from ADEME and Interfel data)
 │  │   │   └─ Impact/           ingredient matching and recipe carbon footprints
 │  │   ├─ Savoirs/            Knowledge card schema + prompt, parser, review scheduler
 │  │   ├─ Media/              EXIF GPS tagging, and the GPS-free copy sent to Gemini
@@ -57,7 +57,7 @@ Flaunedex/
 ├─ Config/Signing.xcconfig   Reads your Team ID from Config/Team.xcconfig (not committed)
 ├─ update.sh                 Pull, keep the signing team, regenerate: the one command to update
 ├─ App/Info.plist, App/Flaunedex.entitlements, App/PrivacyInfo.xcprivacy
-├─ Tools/food-data/          Regenerates the seasonal and footprint tables from ADEME's datasets
+├─ Tools/food-data/          Regenerates the seasonal and footprint tables from ADEME's and Interfel's data
 ├─ .github/workflows/ci.yml  Core tests + app builds on Xcode 26, on every push
 └─ README.md
 ```
@@ -220,15 +220,22 @@ never scaled, because doubling a batch does not double its baking time.
 
 ## Seasons and carbon footprint
 
-1. **The calendar is ADEME's.** Impact CO2's 76 fruits and vegetables give the months each is
-   harvested in France and its footprint in kg CO₂e per kg (Agribalyse 3.2). On top of that, curated
+1. **The calendar is ADEME's, completed from Interfel's.** Impact CO2's 76 fruits and vegetables give
+   the months each is harvested in France and its footprint in kg CO₂e per kg (Agribalyse 3.2). Twelve
+   more come from the calendar of Interfel, the French fresh fruit and vegetable interprofession (chou
+   kale, chou rouge, rutabaga, butternut, potimarron, chicorée frisée, scarole, fève, oseille, patate
+   douce, figue de Barbarie, amande fraîche), each with its footprint taken from Agribalyse 3.2. A
+   product is only added when both exist: Interfel's exotic imports are left out, and so are products
+   Agribalyse has no figure for (champignon de Paris, cèpe, girolle, truffe, pourpier) or that no
+   official calendar gives a full season for (romanesco, radis noir, cardon, crosne, chou-rave,
+   kumquat, pomme de terre). Each product names its sources in the app. On top of that, curated
    by hand and shown as indicative: when Spain, Italy, Portugal or Greece supply each item, which items
    only reach Paris from far away, and where they come from. Each month of each item is French,
    Southern European, a far import, or out of season, in that order of preference.
 2. **A recipe's footprint is computed from its ingredient list.** Each line is matched to a known food
    by whole words, longest name first, so "pommes de terre" is a potato and "lait de coco" is not milk.
    Fresh produce uses the calendar's figure; everything else (meat, dairy, pasta, oil, condiments) uses
-   Agribalyse 3.2, 154 foods in all. Amounts are already metric; counted things use a typical piece
+   Agribalyse 3.2, 152 foods in all. Amounts are already metric; counted things use a typical piece
    weight. What has no data, or no knowable weight, is listed as not evaluated rather than guessed.
 3. **It is put into perspective** against ADEME's reference meals (vegan 0.54, vegetarian 0.85,
    chicken 1.46, beef 4.97 kg CO₂e per meal) and a petrol car's kilometre (0.142 kg).
@@ -298,6 +305,8 @@ is planned for a future version.
 - CloudKit sync needs the paid account (and, only for TestFlight, a Production schema deploy) — see
   [DEPLOYMENT.md](DEPLOYMENT.md). Without it the app runs local-only and says so in Réglages
   rather than failing.
-- Southern Europe months are curated by hand and indicative; only the French calendar is ADEME's.
+- Southern Europe months are curated by hand and indicative; the French months are ADEME's or
+  Interfel's. Interfel's calendar describes the French market, so for the few products also imported
+  (patate douce) its months are the market's season rather than strictly the French harvest.
   Agribalyse has no figure for some common ingredients (champignons de Paris, câpres), which recipes
   list as not evaluated. Home cooking energy is not counted.

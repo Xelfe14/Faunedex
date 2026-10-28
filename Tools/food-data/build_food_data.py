@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """Build the seasonal-produce and food-impact catalogues the Cuisine section ships with.
 
-Two public datasets, both from ADEME and both under the Licence Ouverte 2.0:
+Three public sources:
 
-- Impact CO2 "fruits et légumes de saison" (https://impactco2.fr/outils/fruitsetlegumes):
-  for each fruit and vegetable, the months it is in season in France and its
-  carbon footprint in kg CO2e per kg (Agribalyse 3.2).
-- Agribalyse 3.2 synthèse (https://data.ademe.fr/datasets/agribalyse-31-synthese):
-  the footprint of ~2,450 foods as sold in France, used for every ingredient that
-  is not a fresh fruit or vegetable (meat, dairy, pasta, oil...).
+- Impact CO2 "fruits et légumes de saison" (ADEME, https://impactco2.fr/outils/fruitsetlegumes,
+  Licence Ouverte 2.0): for each of its 76 fruits and vegetables, the months it is
+  in season in France and its carbon footprint in kg CO2e per kg (Agribalyse 3.2).
+- Agribalyse 3.2 synthèse (ADEME, https://data.ademe.fr/datasets/agribalyse-31-synthese,
+  Licence Ouverte 2.0): the footprint of ~2,450 foods as sold in France, used for
+  every ingredient that is not a fresh fruit or vegetable (meat, dairy, pasta,
+  oil...), and for the produce added from Interfel below.
+- Interfel's seasonal calendar (https://www.lesfruitsetlegumesfrais.com/calendrier-fruits-legumes),
+  from the French fresh fruit and vegetable interprofession: the months each of
+  its ~100 products is in season on the French market. Used only for products
+  ADEME's calendar lacks, and only where Agribalyse has the product's footprint,
+  so every row has a real season and a real figure.
 
 What the datasets do not say is added here by hand and marked as such in the app:
 the months Southern Europe (Spain, Italy, Portugal, Greece and their islands)
@@ -25,13 +31,18 @@ only.
 """
 
 import csv
+import html
 import io
 import json
+import re
 import sys
 import urllib.request
 from pathlib import Path
 
 IMPACT_CO2_URL = "https://impactco2.fr/api/v1/fruitsetlegumes?month={month}"
+INTERFEL_URL = "https://www.lesfruitsetlegumesfrais.com/calendrier-fruits-legumes/{month}"
+INTERFEL_MONTHS = ["janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout",
+                   "septembre", "octobre", "novembre", "decembre"]
 AGRIBALYSE_URL = "https://data.ademe.fr/data-fair/api/v1/datasets/agribalyse-31-synthese/raw"
 USER_AGENT = "Flaunedex/1.0 (https://github.com/Xelfe14/Faunedex)"
 
@@ -132,12 +143,12 @@ PRODUCE = {
     "carotte": dict(europe=[4, 5, 6, 7, 8], origins="Espagne, Italie", aliases=["carotte"], piece=100,
                     units={"botte": 500}),
     "champignonmorille": dict(label="Morille", aliases=["morille"], piece=10),
-    "chou": dict(aliases=["chou", "chou vert", "chou blanc", "chou rouge", "chou frise", "chou pointu"], piece=1000),
+    "chou": dict(aliases=["chou", "chou vert", "chou blanc", "chou frise", "chou pointu", "chou de milan"], piece=1000),
     "choudebruxelles": dict(aliases=["chou de bruxelles"], piece=15),
     "choufleur": dict(europe=[10, 11, 12, 1, 2, 3, 4], origins="Espagne, Italie", aliases=["chou fleur"], piece=800),
     "concombre": dict(europe=[10, 11, 12, 1, 2, 3, 4, 5], origins="Espagne (sous abri)",
                       aliases=["concombre"], piece=300),
-    "courge": dict(aliases=["courge", "butternut", "courge butternut", "potimarron", "courge musquee"], piece=1000),
+    "courge": dict(aliases=["courge", "courge musquee"], piece=1000),
     "courgette": dict(europe=[10, 11, 12, 1, 2, 3, 4, 5], origins="Espagne (sous abri)",
                       aliases=["courgette"], piece=250),
     "cresson": dict(aliases=["cresson"], piece=150, units={"botte": 150}),
@@ -169,6 +180,53 @@ PRODUCE = {
                     units={"botte": 300}),
     "topinambour": dict(aliases=["topinambour"], piece=60),
     "mais": dict(aliases=["mais", "epi de mais"], piece=250),
+}
+
+# ---------------------------------------------------------------------------
+# Added from Interfel: products ADEME's calendar lacks, sold in France and grown
+# in Europe. Each needs both a season in Interfel's calendar and a footprint in
+# Agribalyse; the script fails if either disappears.
+#
+# interfel:   the product's name in Interfel's calendar; its months become the
+#             French months, unless `france` overrides them.
+# agribalyse: the Agribalyse 3.2 product its footprint is taken from.
+# europe_from_interfel: Interfel's months are when Southern Europe supplies it.
+# Other keys as in PRODUCE.
+# ---------------------------------------------------------------------------
+ADDED = {
+    "choukale": dict(name="Chou kale", interfel="Chou kale", agribalyse="Chou frisé, cru",
+                     category="vegetable", aliases=["chou kale", "kale"], piece=200),
+    "chourouge": dict(name="Chou rouge", interfel="Chou rouge", agribalyse="Chou rouge, cru",
+                      category="vegetable", aliases=["chou rouge"], piece=1000),
+    "rutabaga": dict(name="Rutabaga", interfel="Rutabaga", agribalyse="Rutabaga, cru",
+                     category="vegetable", aliases=["rutabaga"], piece=500),
+    "butternut": dict(name="Butternut", interfel="Courges et potirons",
+                      agribalyse="Courge doubeurre (butternut), pulpe, crue",
+                      category="vegetable", aliases=["butternut", "courge butternut", "doubeurre"], piece=1200,
+                      note="Saison des courges et potirons dans le calendrier Interfel."),
+    "potimarron": dict(name="Potimarron", interfel="Courges et potirons", agribalyse="Potimarron, pulpe, cru",
+                       category="vegetable", aliases=["potimarron"], piece=1200,
+                       note="Saison des courges et potirons dans le calendrier Interfel."),
+    "chicoreefrisee": dict(name="Chicorée frisée", interfel="Chicorée",
+                           agribalyse="Salade ou chicorée frisée, crue",
+                           category="vegetable", aliases=["chicoree frisee", "frisee", "salade frisee", "chicoree"],
+                           piece=400),
+    "scarole": dict(name="Scarole", interfel="Chicorée", agribalyse="Scarole, crue",
+                    category="vegetable", aliases=["scarole", "salade scarole"], piece=400),
+    "feve": dict(name="Fève", interfel="Fève", agribalyse="Fève à écosser, fraîche",
+                 category="vegetable", aliases=["feve", "feve fraiche"], piece=None),
+    "oseille": dict(name="Oseille", interfel="Oseille", agribalyse="Oseille, crue",
+                    category="vegetable", aliases=["oseille"], piece=None, units={"botte": 100}),
+    "patatedouce": dict(name="Patate douce", interfel="Patate douce", agribalyse="Patate douce, crue",
+                        category="vegetable", aliases=["patate douce"], piece=300,
+                        note="Un peu cultivée en France ; une grande part vient d'Espagne, du Portugal ou de plus loin."),
+    "figuedebarbarie": dict(name="Figue de Barbarie", interfel="Figue de Barbarie",
+                            agribalyse="Figue de Barbarie, pulpe et graines, crue",
+                            category="fruit", aliases=["figue de barbarie"], piece=100,
+                            france=[], europe_from_interfel=True, origins="Italie (Sicile), Espagne"),
+    "amandefraiche": dict(name="Amande fraîche", interfel="Amande", agribalyse="Amande (avec peau)",
+                          category="nut", aliases=["amande fraiche"], piece=1.2,
+                          note="La saison des amandes fraîches ; sèches, elles se gardent toute l'année."),
 }
 
 # Everything else a recipe uses, footprint from Agribalyse 3.2.
@@ -327,7 +385,6 @@ FOODS = [
      ["haricot rouge en conserve", "haricot blanc en conserve", "haricot rouge cuit", "haricot blanc cuit"],
      250, 1, {}),
     ("pois-casse", "Pois cassés", "Pois cassé, sec", ["pois casse"], None, 0.85, {}),
-    ("feve", "Fèves", "Fève à écosser, fraîche", ["feve"], None, 1, {}),
     ("tofu", "Tofu", "Tofu, nature", ["tofu", "tofu ferme", "tofu soyeux"], 200, 1, {}),
     # Potatoes and roots outside the ADEME calendar
     ("pomme-de-terre", "Pomme de terre", "Pomme de terre, sans peau, crue",
@@ -335,7 +392,6 @@ FOODS = [
      150, 1, {}),
     ("pomme-de-terre-nouvelle", "Pomme de terre nouvelle", "Pomme de terre nouvelle, crue",
      ["pomme de terre nouvelle", "pomme de terre primeur"], 60, 1, {}),
-    ("patate-douce", "Patate douce", "Patate douce, crue", ["patate douce"], 300, 1, {}),
     ("gingembre", "Gingembre", "Gingembre, racine crue", ["gingembre", "gingembre frais"], 20, 1, {}),
     ("gingembre-poudre", "Gingembre en poudre", "Gingembre, poudre", ["gingembre en poudre"], None, 0.5, {}),
     ("citron-vert", "Citron vert", "Citron vert ou Lime, pulpe, cru",
@@ -491,6 +547,24 @@ def swift_units(units):
     return "[" + ", ".join(pairs) + "]" if pairs else "[:]"
 
 
+def interfel_calendar():
+    """Interfel's products and the months each is in season, read from the
+    month classes its calendar page filters on (one page per month, every
+    product carrying its full list)."""
+    names = {}
+    for page in INTERFEL_MONTHS:
+        text = fetch(INTERFEL_URL.format(month=page)).decode("utf-8")
+        for classes, name in re.findall(
+                r'<div id="product-\d+" class="calendar__item ([^"]+)">.*?<span class="name">(.*?)</span>',
+                text, re.S):
+            months = {INTERFEL_MONTHS.index(c[6:]) + 1 for c in classes.split()
+                      if c.startswith("month-") and c[6:] in INTERFEL_MONTHS}
+            names.setdefault(html.unescape(name).strip(), set()).update(months)
+    if len(names) < 50:
+        sys.exit(f"Interfel's calendar looks broken: only {len(names)} products read")
+    return names
+
+
 def main():
     # Impact CO2: one request per month; every item carries its full month list.
     produce = {}
@@ -509,6 +583,29 @@ def main():
         if food[2] is not None and food[2] not in agribalyse:
             sys.exit(f"Agribalyse no longer has {food[2]!r} (food {food[0]})")
 
+    interfel = interfel_calendar()
+    for slug, extra in ADDED.items():
+        if slug in produce:
+            sys.exit(f"{slug} is now in Impact CO2: drop it from ADDED")
+        if extra["interfel"] not in interfel:
+            sys.exit(f"Interfel's calendar no longer has {extra['interfel']!r} ({slug})")
+        if extra["agribalyse"] not in agribalyse:
+            sys.exit(f"Agribalyse no longer has {extra['agribalyse']!r} ({slug})")
+        months = sorted(interfel[extra["interfel"]])
+        if not months:
+            sys.exit(f"Interfel gives no month for {extra['interfel']!r} ({slug})")
+        curated = {k: v for k, v in extra.items()
+                   if k not in ("name", "interfel", "agribalyse", "category", "europe_from_interfel")}
+        if extra.get("europe_from_interfel"):
+            curated["europe"] = months
+        PRODUCE[slug] = curated
+        produce[slug] = {
+            "slug": slug, "name": extra["name"], "months": months,
+            "ecv": agribalyse[extra["agribalyse"]], "category": extra["category"],
+            "season_source": f"Calendrier Interfel ({extra['interfel']})",
+            "footprint_source": f"Agribalyse 3.2 : {extra['agribalyse']}",
+        }
+
     produce_lines, produce_foods = [], []
     for item in produce.values():
         item["ademe_name"] = item["name"]
@@ -522,14 +619,16 @@ def main():
         produce_lines.append(
             "        Produce(\n"
             f"            id: {swift_string(slug)}, name: {swift_string(item['name'])},\n"
-            f"            category: .{CATEGORY[item['category']]},\n"
+            f"            category: .{CATEGORY.get(item['category'], item['category'])},\n"
             f"            franceMonths: {swift_months(france)},\n"
             f"            europeMonths: {swift_months(extra.get('europe', []))},\n"
             f"            availableMonths: {swift_months(item['months'])},\n"
             f"            farImport: {'true' if extra.get('far') else 'false'},\n"
             f"            origins: {swift_string(extra['origins']) if extra.get('origins') else 'nil'},\n"
             f"            note: {swift_string(extra['note']) if extra.get('note') else 'nil'},\n"
-            f"            kgCO2ePerKg: {swift_double(item['ecv'])}\n"
+            f"            kgCO2ePerKg: {swift_double(item['ecv'])},\n"
+            f"            seasonSource: {swift_string(item.get('season_source', 'Calendrier de l’ADEME (Impact CO2)'))},\n"
+            f"            footprintSource: {swift_string(item.get('footprint_source', 'Impact CO2 (ADEME), Agribalyse 3.2'))}\n"
             "        ),"
         )
         piece = extra.get("piece")
@@ -538,7 +637,7 @@ def main():
             f"            id: {swift_string('produce:' + slug)}, name: {swift_string(item['name'])},\n"
             f"            aliases: [{', '.join(swift_string(a) for a in extra['aliases'])}],\n"
             f"            kgCO2ePerKg: {swift_double(item['ecv'])},\n"
-            f"            source: {swift_string('Impact CO2 (ADEME) : ' + item['ademe_name'])},\n"
+            f"            source: {swift_string(item.get('footprint_source', 'Impact CO2 (ADEME) : ' + item['ademe_name']))},\n"
             f"            produceID: {swift_string(slug)},\n"
             f"            gramsPerPiece: {swift_double(piece) if piece else 'nil'},\n"
             f"            gramsPerMilliliter: 1,\n"
@@ -570,7 +669,8 @@ def main():
         header +
         "extension ProduceCatalog {\n"
         "    /// Impact CO2 (ADEME) seasonal calendar and footprints, Agribalyse 3.2,\n"
-        "    /// Licence Ouverte 2.0; Southern Europe months, far imports and notes curated.\n"
+        "    /// Licence Ouverte 2.0, completed from Interfel's calendar; Southern Europe\n"
+        "    /// months, far imports and notes curated.\n"
         "    public static let all: [Produce] = [\n" + "\n".join(produce_lines) + "\n    ]\n}\n"
     )
     FOOD_OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -583,7 +683,7 @@ def main():
         "    /// Everything else: footprint from Agribalyse 3.2 (ADEME, Licence Ouverte 2.0).\n"
         "    static let pantryFoods: [Food] = [\n" + "\n".join(food_lines) + "\n    ]\n}\n"
     )
-    print(f"{len(order)} produce items, {len(FOODS)} pantry foods written.")
+    print(f"{len(order)} produce items ({len(ADDED)} from Interfel), {len(FOODS)} pantry foods written.")
 
 
 if __name__ == "__main__":

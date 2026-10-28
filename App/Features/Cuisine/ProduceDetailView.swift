@@ -88,7 +88,7 @@ struct ProduceDetailView: View {
         } header: {
             Text("Quand en manger")
         } footer: {
-            Text("France : calendrier de l'ADEME. Europe du Sud, origines et imports : estimation indicative.")
+            Text("France : \(produce.seasonSource). Europe du Sud, origines et imports : estimation indicative.")
         }
     }
 
@@ -106,7 +106,7 @@ struct ProduceDetailView: View {
         } header: {
             Text("Impact carbone")
         } footer: {
-            Text("Par kilo acheté en France, de la culture au magasin. Source : Impact CO2 (ADEME), Agribalyse 3.2.")
+            Text("Par kilo acheté en France, de la culture au magasin. Source : \(produce.footprintSource).")
         }
     }
 

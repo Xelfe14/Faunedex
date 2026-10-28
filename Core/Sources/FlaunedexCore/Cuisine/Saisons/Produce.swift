@@ -46,10 +46,11 @@ public enum SeasonStatus: Int, Sendable, CaseIterable, Comparable {
 
 /// One fruit or vegetable of the seasonal calendar.
 ///
-/// The French months and the footprint come from ADEME's Impact CO2 calendar;
-/// the Southern Europe months, the far-import flag, the origins and the note are
-/// curated by hand and only indicative. The generated catalogue says which is
-/// which, and the app says so too.
+/// The French months and the footprint come from ADEME's Impact CO2 calendar,
+/// or, for the products it lacks, from Interfel's calendar and Agribalyse; each
+/// row names its own sources. The Southern Europe months, the far-import flag,
+/// the origins and the note are curated by hand and only indicative, and the
+/// app says so.
 public struct Produce: Sendable, Identifiable, Hashable {
     /// The Impact CO2 slug, stable across releases.
     public let id: String
@@ -68,10 +69,16 @@ public struct Produce: Sendable, Identifiable, Hashable {
     public let note: String?
     /// Carbon footprint as sold in France, kg CO2e per kg.
     public let kgCO2ePerKg: Double
+    /// Where the French months come from.
+    public let seasonSource: String
+    /// Where the footprint comes from.
+    public let footprintSource: String
 
     public init(id: String, name: String, category: ProduceCategory,
                 franceMonths: Set<Int>, europeMonths: Set<Int>, availableMonths: Set<Int>,
-                farImport: Bool, origins: String?, note: String?, kgCO2ePerKg: Double) {
+                farImport: Bool, origins: String?, note: String?, kgCO2ePerKg: Double,
+                seasonSource: String = "Calendrier de l’ADEME (Impact CO2)",
+                footprintSource: String = "Impact CO2 (ADEME), Agribalyse 3.2") {
         self.id = id
         self.name = name
         self.category = category
@@ -82,6 +89,8 @@ public struct Produce: Sendable, Identifiable, Hashable {
         self.origins = origins
         self.note = note
         self.kgCO2ePerKg = kgCO2ePerKg
+        self.seasonSource = seasonSource
+        self.footprintSource = footprintSource
     }
 
     public static func == (lhs: Produce, rhs: Produce) -> Bool { lhs.id == rhs.id }

@@ -8,8 +8,9 @@ enum SeasonGrid {
     static let spacing: CGFloat = 2
 }
 
-/// The seasonal calendar: every fruit and vegetable ADEME tracks, one row each,
-/// twelve months across, coloured by where it comes from in each month.
+/// The seasonal calendar: every fruit and vegetable ADEME tracks, completed
+/// from Interfel's calendar, one row each, twelve months across, coloured by
+/// where it comes from in each month.
 ///
 /// Nothing is hidden by default: far imports stay in, greyed, because the
 /// choice at the market is the cook's. The month starts on today in Paris and
@@ -83,7 +84,7 @@ struct SeasonsView: View {
                     .padding(.top, 40)
             }
 
-            Text("Saison en France : calendrier de l'ADEME (Impact CO2). Europe du Sud, imports et origines : estimation indicative. Empreinte par kilo : Agribalyse 3.2.")
+            Text("Saison en France : calendrier de l'ADEME (Impact CO2), complété par celui d'Interfel, l'interprofession des fruits et légumes frais. Europe du Sud, imports et origines : estimation indicative. Empreinte par kilo : Agribalyse 3.2 (ADEME). Chaque fiche indique ses sources.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .padding()
