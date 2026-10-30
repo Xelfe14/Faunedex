@@ -10,16 +10,16 @@ import FlaunedexCore
 ///
 /// The shutter never waits: the GPS is warmed up while the camera is open, and
 /// a position that arrives after the photo is attached to it then. Once the
-/// photo is saved, `onCaptured` takes the user back where they came from, and
-/// the status pill follows the identification from there.
+/// photo is saved, `onCaptured` hands it over: the tab bar goes back where the
+/// user came from and opens its analysis on top.
 struct CaptureView: View {
     /// Whether this screen is really the one in front of the user: its tab is
     /// selected and its app is on screen. Decided by the tab bar rather than by
     /// appearance, because a tab view may build this screen, and run its tasks,
     /// before it is ever shown; the camera must not run then.
     var isVisible = true
-    /// Called once a photo is safely queued.
-    var onCaptured: () -> Void = {}
+    /// Called with the sighting once the photo is safely queued.
+    var onCaptured: (Sighting) -> Void = { _ in }
 
     @Environment(ScanCoordinator.self) private var scan
     @Environment(APIKeys.self) private var keys
@@ -176,7 +176,7 @@ struct CaptureView: View {
             if fix == nil && !location.isDenied {
                 attachLateFix(to: sighting)
             }
-            onCaptured()
+            onCaptured(sighting)
             if connectivity.isOnline { await scan.processQueue() }
         } catch {
             show("Échec de la capture.")

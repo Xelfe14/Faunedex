@@ -140,11 +140,10 @@ jobs:
             sleep 7
             xcrun simctl io "$UDID" screenshot "screenshots/$name.png"
           }
-          shoot 1-saisons -previewScreen saisons
-          shoot 2-kale -previewScreen kale
+          shoot 1-analyse -previewScreen analyse
+          shoot 2-discussion -previewScreen discussion
           shoot 3-pastille -previewScreen pastille
-          shoot 4-fiche -previewScreen fiche
-          shoot 5-rubriques -previewScreen rubriques
+          shoot 4-saisons -previewScreen saisons
 
       - name: Keep the screenshots
         if: always()

@@ -39,7 +39,7 @@ struct JournalView: View {
             }
         }
         .navigationTitle("Journal")
-        .sheet(item: $reviewing) { ReviewSheet(sighting: $0) }
+        .sheet(item: $reviewing) { AnalysisView(sighting: $0) }
     }
 
     @ViewBuilder private func row(for sighting: Sighting) -> some View {

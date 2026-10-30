@@ -160,9 +160,17 @@ iPhone selected. Reinstalling over the app keeps everything it holds.
 
 The shutter never waits. The GPS warms up while the camera is open and the photo takes the latest
 fix; if there is none yet, the photo is saved at once and the position is attached when the GPS finds
-it. The app then goes back to the tab you came from, and a pill above the tab bar follows the
-identification to its result: open the species, choose between candidates, or retry. A photo that
-still has no position is counted above the map, with a picker to place it by hand.
+it. The shutter opens the **analysis** straight away: the photo, the identification as it happens,
+then the species with its spécificité and fun fact, or the candidates to choose between when Gemini
+is unsure, or a retry. Closed before the result, a pill above the tab bar keeps following it. A photo
+that still has no position is counted above the map, with a picker to place it by hand.
+
+Below the result, a **conversation**: ask Gemini anything about the species or the photo ("mâle ou
+femelle ?", "est-il protégé ?"). Each question goes with the photo (the same small, GPS-free copy),
+what the identification said and the conversation so far; the prompt forbids edibility and medicinal
+advice. Select a passage of an answer and choose **Surligner** in the menu (or keep a whole answer in
+one tap): it is marked in the conversation and kept on the species card under "Mes surlignages". The
+conversation is kept on the species too, and picks up from the card.
 
 Offline, the capture is saved immediately and the whole pipeline runs later when the network returns
 (`NWPathMonitor`-driven queue).

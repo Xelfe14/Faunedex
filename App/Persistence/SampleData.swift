@@ -44,6 +44,17 @@ enum SampleData {
             species.toxicityDangerFR = spec.toxicity
             species.enrichmentStatus = .complete
             species.firstUnlockedAt = Date().addingTimeInterval(-Double(index) * 86_400)
+            if spec.scientificName == "Vulpes vulpes" {
+                // A conversation, with one passage kept on the card.
+                let answer = ChatTurn(role: .model, text: "Oui. Le renard roux s'est très bien adapté aux villes : il vit à Londres, à Zurich ou en banlieue parisienne, où il profite des jardins, des friches et des déchets. Il y reste surtout actif la nuit, mais là où il n'est pas dérangé, on le croise aussi en plein jour.")
+                species.chat = [
+                    ChatTurn(role: .user, text: "Est-ce qu'on peut le croiser en ville ?"),
+                    answer,
+                ]
+                species.highlights = [
+                    SpeciesHighlight(text: "Le renard roux s'est très bien adapté aux villes", messageID: answer.id),
+                ]
+            }
             context.insert(species)
 
             for (offset, place) in spec.places.enumerated() {

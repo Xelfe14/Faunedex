@@ -73,6 +73,7 @@ struct RootTabView: View {
     @State private var scan: ScanCoordinator?
     @State private var recipes: RecipeStore?
     @State private var knowledge: KnowledgeStore?
+    @State private var speciesChat: SpeciesChatStore?
 
     private var current: AppSection {
         #if DEBUG
@@ -88,6 +89,7 @@ struct RootTabView: View {
     @Query(sort: \Species.dexNumber) private var previewSpecies: [Species]
     @Query(sort: \Recipe.sortIndex) private var previewRecipes: [Recipe]
     @Query(sort: \KnowledgeCard.createdAt, order: .reverse) private var previewCards: [KnowledgeCard]
+    @Query(sort: \Sighting.capturedAt, order: .reverse) private var previewSightings: [Sighting]
 
     private static let previewApps: [String: AppSection] = [
         "nature": .nature, "pastille": .nature,
@@ -110,11 +112,12 @@ struct RootTabView: View {
 
     var body: some View {
         Group {
-            if let scan, let recipes, let knowledge {
+            if let scan, let recipes, let knowledge, let speciesChat {
                 content
                     .environment(scan)
                     .environment(recipes)
                     .environment(knowledge)
+                    .environment(speciesChat)
                     // Captures queued offline are identified whichever app is
                     // on screen when the connection comes back.
                     .task(id: connectivity.becameOnlineTick) { await scan.processQueue() }
@@ -142,6 +145,7 @@ struct RootTabView: View {
                         self.scan = scan
                         recipes = RecipeStore(context: context, keys: keys)
                         knowledge = KnowledgeStore(context: context, keys: keys)
+                        speciesChat = SpeciesChatStore(context: context, keys: keys)
                     }
             }
         }
@@ -260,6 +264,14 @@ struct RootTabView: View {
                     .navigationBarTitleDisplayMode(.inline)
                 }
             }
+        case "analyse":
+            if let sighting = previewSightings.first(where: { $0.species?.scientificName == "Vulpes vulpes" }) {
+                AnalysisView(sighting: sighting)
+            }
+        case "discussion":
+            if let fox = previewSpecies.first(where: { $0.scientificName == "Vulpes vulpes" }) {
+                NavigationStack { SpeciesChatView(species: fox) }
+            }
         case "fiches": NavigationStack { KnowledgeListView() }
         case "rubriques": KnowledgeCategoriesView()
         case "nouvelle-rubrique": CategoryEditorView(category: nil)
@@ -360,6 +372,8 @@ private struct NatureTabs: View {
     @State private var tab: NatureTab
     /// Where the shutter sends the user back to once the photo is saved.
     @State private var beforeCapture: NatureTab = .faune
+    /// The photo just taken, whose analysis opens over the tab bar.
+    @State private var analysing: Sighting?
 
     /// The camera is in front of the user, which only the tab bar knows.
     private var cameraVisible: Bool { tab == .capture && isActiveApp }
@@ -376,7 +390,10 @@ private struct NatureTabs: View {
             DexView(realm: .plant)
                 .tabItem { Label("Flore", systemImage: "leaf.fill") }
                 .tag(NatureTab.flore)
-            CaptureView(isVisible: cameraVisible, onCaptured: { tab = beforeCapture })
+            CaptureView(isVisible: cameraVisible, onCaptured: { sighting in
+                tab = beforeCapture
+                analysing = sighting
+            })
                 .tabItem { Label("Capturer", systemImage: "camera.fill") }
                 .tag(NatureTab.capture)
             SightingsMapView()
@@ -392,6 +409,16 @@ private struct NatureTabs: View {
         }
         .onChange(of: cameraVisible, initial: true) { _, visible in
             scan.cameraOnScreen = visible
+        }
+        // Straight to the analysis. Closed once the result is in, the status
+        // pill has nothing left to say; closed earlier, it keeps following.
+        .sheet(item: $analysing, onDismiss: {
+            if let last = scan.lastCapture,
+               last.status != .pendingIdentification, last.status != .pendingGeocoding {
+                scan.lastCapture = nil
+            }
+        }) { sighting in
+            AnalysisView(sighting: sighting)
         }
     }
 }

@@ -11,8 +11,8 @@ struct CaptureStatusPill: View {
     @Environment(Connectivity.self) private var connectivity
     @Environment(APIKeys.self) private var keys
 
-    @State private var openedSpecies: Species?
-    @State private var reviewing: Sighting?
+    /// The analysis page, opened from the pill.
+    @State private var analysing: Sighting?
 
     private let store = PhotoStore()
 
@@ -38,17 +38,7 @@ struct CaptureStatusPill: View {
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: scan.lastCapture?.id)
-        .sheet(item: $openedSpecies, onDismiss: { scan.lastCapture = nil }) { species in
-            NavigationStack {
-                SpeciesDetailView(species: species)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Fermer") { openedSpecies = nil }
-                        }
-                    }
-            }
-        }
-        .sheet(item: $reviewing, onDismiss: { scan.lastCapture = nil }) { ReviewSheet(sighting: $0) }
+        .sheet(item: $analysing, onDismiss: { scan.lastCapture = nil }) { AnalysisView(sighting: $0) }
     }
 
     private func pill(for sighting: Sighting) -> some View {
@@ -69,11 +59,11 @@ struct CaptureStatusPill: View {
             case .identifying:
                 ProgressView()
             case .identified(let species, _):
-                Button("Voir") { openedSpecies = species }
+                Button("Voir") { analysing = sighting }
                 .buttonStyle(.borderedProminent)
                 .tint(Theme.accent(for: species.realm))
             case .needsReview, .failed:
-                Button(state.isFailure ? "Réessayer" : "Choisir") { reviewing = sighting }
+                Button(state.isFailure ? "Réessayer" : "Choisir") { analysing = sighting }
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
             case .waiting:
@@ -94,6 +84,9 @@ struct CaptureStatusPill: View {
         .controlSize(.small)
         .padding(.leading, 8).padding(.trailing, 6).padding(.vertical, 8)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        // The whole pill opens the analysis, even before the result.
+        .onTapGesture { analysing = sighting }
         .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
         .padding(.horizontal, 12)
     }

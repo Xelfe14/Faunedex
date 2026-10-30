@@ -12,6 +12,7 @@ import FlaunedexCore
 struct SpeciesDetailView: View {
     let species: Species
     @State private var audioPlayer: AVPlayer?
+    @Environment(SpeciesChatStore.self) private var chat
 
     private var accent: Color { Theme.accent(for: species.realm) }
     private var sightings: [Sighting] {
@@ -40,6 +41,8 @@ struct SpeciesDetailView: View {
                 if let fun = species.funFactFR, !fun.isEmpty {
                     infoCard("Le petit plus", systemImage: "sparkles", text: fun, tint: Theme.treasure)
                 }
+                highlightsSection
+                discussionLink
                 if let months = monthsLabel { seasonCard(months) }
                 birdSong
                 rangeSection
@@ -53,6 +56,82 @@ struct SpeciesDetailView: View {
         .navigationTitle(species.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .tint(accent)
+    }
+
+    // MARK: The observer's own layer
+
+    /// The passages highlighted in the conversation, kept on the card.
+    @ViewBuilder private var highlightsSection: some View {
+        if !species.highlights.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Mes surlignages", systemImage: "highlighter")
+                    .font(Theme.display(16))
+                    .foregroundStyle(accent)
+                ForEach(species.highlights) { highlight in
+                    HStack(alignment: .top, spacing: 10) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.yellow.opacity(0.8))
+                            .frame(width: 4)
+                        Text(highlight.text)
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 2)
+                    .contentShape(Rectangle())
+                    .contextMenu {
+                        Button {
+                            UIPasteboard.general.string = highlight.text
+                        } label: {
+                            Label("Copier", systemImage: "doc.on.doc")
+                        }
+                        Button(role: .destructive) {
+                            chat.removeHighlight(highlight, from: species)
+                        } label: {
+                            Label("Retirer de la fiche", systemImage: "trash")
+                        }
+                    }
+                }
+                Text("Appui long sur un passage pour le copier ou le retirer.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .cardSurface(radius: Theme.tileRadius)
+        }
+    }
+
+    private var discussionSummary: String {
+        let questions = species.chat.filter { $0.role == .user }.count
+        if questions == 0 { return "Sur cette espèce ou sur votre photo, à Gemini" }
+        return questions == 1 ? "1 question posée" : "\(questions) questions posées"
+    }
+
+    /// The conversation about this species, to pick up where it was left.
+    private var discussionLink: some View {
+        NavigationLink {
+            SpeciesChatView(species: species)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                    .font(.title3)
+                    .foregroundStyle(accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(species.chat.isEmpty ? "Poser une question" : "Reprendre la discussion")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(discussionSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .cardSurface(radius: Theme.tileRadius)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Hero

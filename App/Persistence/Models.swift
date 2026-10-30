@@ -53,6 +53,13 @@ final class Species {
     var audioSourcePageURL: String?
     var audioCatalogNumber: String?
 
+    // The observer's own layer.
+
+    /// Questions asked about this species and Gemini's answers, oldest first.
+    var chat: [ChatTurn] = []
+    /// Passages of those answers the observer highlighted, shown on the card.
+    var highlights: [SpeciesHighlight] = []
+
     var firstUnlockedAt: Date = Date.now
     /// Catalogue number in discovery order — the "N° 007" that gives the
     /// collection its Pokédex character. Assigned when the species is created.
