@@ -70,6 +70,16 @@ struct ConversationMessages: View {
                 Label(error, systemImage: "exclamationmark.triangle")
                     .font(.footnote)
                     .foregroundStyle(.orange)
+                if let question = chat.failed[species.gbifKey] {
+                    Button {
+                        Task { await chat.ask(question, about: species, photo: sighting) }
+                    } label: {
+                        Label("Renvoyer « \(question) »", systemImage: "arrow.clockwise")
+                            .font(.footnote.weight(.semibold))
+                            .lineLimit(2)
+                    }
+                    .foregroundStyle(Theme.accent(for: species.realm))
+                }
             }
         }
     }

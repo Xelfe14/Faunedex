@@ -19,6 +19,8 @@ final class SpeciesChatStore {
     var pending: [Int: String] = [:]
     /// The last failure for a species, in French.
     var errors: [Int: String] = [:]
+    /// The question that failed, so it can be sent again without retyping it.
+    var failed: [Int: String] = [:]
 
     init(context: ModelContext, keys: APIKeys) {
         self.context = context
@@ -39,6 +41,7 @@ final class SpeciesChatStore {
             return
         }
         errors[species.gbifKey] = nil
+        failed[species.gbifKey] = nil
         pending[species.gbifKey] = text
         defer { pending[species.gbifKey] = nil }
 
@@ -62,6 +65,7 @@ final class SpeciesChatStore {
             save()
         } catch {
             errors[species.gbifKey] = Self.frenchMessage(for: error)
+            failed[species.gbifKey] = text
         }
     }
 
