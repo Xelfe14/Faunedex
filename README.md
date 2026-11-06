@@ -93,8 +93,8 @@ cd Core && swift test
 # 2. Generate the Xcode project
 cd .. && xcodegen generate
 
-# 3. Open it
-open Flaunedex.xcodeproj
+# 3. Open it (in Xcode, even if another editor opens .xcodeproj files by default)
+open -a Xcode Flaunedex.xcodeproj
 ```
 
 ### Try it without an API key

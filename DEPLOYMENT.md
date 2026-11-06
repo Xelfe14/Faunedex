@@ -35,7 +35,7 @@ ID and approval takes longer.
    or 26. (The "Xcode 26 only" rule applies to App Store Connect uploads, which
    this route never makes.)
 2. **Xcode → Settings → Accounts → +** and sign in with the Apple ID you enrolled.
-3. In the repository: `xcodegen generate && open Flaunedex.xcodeproj`.
+3. In the repository: `xcodegen generate && open -a Xcode Flaunedex.xcodeproj`.
 4. Target **Flaunedex** → **Signing & Capabilities** → tick *Automatically manage
    signing* and pick your Team. Leave **iCloud** (CloudKit, container
    `iCloud.com.taddeocarpinelli.flaunedex`), **Push Notifications** and

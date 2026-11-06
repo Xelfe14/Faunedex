@@ -48,7 +48,12 @@ fi
 
 git pull --ff-only
 xcodegen generate
-open Flaunedex.xcodeproj
+
+# A bare `open` uses the Mac's default app for .xcodeproj files, which another
+# editor (Cursor, VS Code…) may have taken over. Ask for Xcode itself: the one
+# chosen with xcode-select, or else the app named Xcode.
+XCODE_APP=$(xcode-select -p 2>/dev/null | sed -n 's#^\(.*\.app\)/Contents/Developer$#\1#p')
+open -a "${XCODE_APP:-Xcode}" Flaunedex.xcodeproj
 
 if [ ! -f "$TEAM_FILE" ]; then
   echo "ℹ︎ Choisissez votre équipe une fois dans Xcode (Signing & Capabilities), puis relancez ./update.sh : elle sera mémorisée."
