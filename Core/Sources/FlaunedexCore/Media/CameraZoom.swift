@@ -28,12 +28,13 @@ public struct CameraZoom: Sendable, Equatable {
         let main = hasUltraWide ? (switchOverFactors.first ?? 1) : 1
         let telephotos = switchOverFactors.dropFirst(hasUltraWide ? 1 : 0).map { $0 / main }
         let limit = max(Self.digitalLimit, 2 * (telephotos.max() ?? 1))
+        let highest = max(minFactor, min(maxFactor, limit * main))
         mainFactor = main
         self.minFactor = minFactor
-        self.maxFactor = max(minFactor, min(maxFactor, limit * main))
+        self.maxFactor = highest
 
         var presets: [Double] = (hasUltraWide ? [minFactor / main] : []) + [1, 2] + telephotos
-        presets = presets.filter { $0 * main >= minFactor - 0.001 && $0 * main <= self.maxFactor + 0.001 }
+        presets = presets.filter { $0 * main >= minFactor - 0.001 && $0 * main <= highest + 0.001 }
         var unique: [Double] = []
         for preset in presets.sorted() where !unique.contains(where: { abs($0 - preset) < 0.05 }) {
             unique.append(preset)

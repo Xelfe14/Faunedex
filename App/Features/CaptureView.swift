@@ -186,23 +186,23 @@ struct CaptureView: View {
                 } label: {
                     Text(isActive ? CameraZoom.label(shown) + "×" : CameraZoom.label(preset))
                         .font(.system(size: isActive ? 13 : 12, weight: .bold).monospacedDigit())
-                        .foregroundStyle(isActive ? .yellow : .white)
+                        .foregroundStyle(isActive ? Color.yellow : Color.white)
                         .frame(width: isActive ? 40 : 32, height: isActive ? 40 : 32)
-                        .background(.black.opacity(0.45), in: Circle())
+                        .background(Color.black.opacity(0.45), in: Circle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Zoom \(CameraZoom.label(preset))×")
             }
         }
         .padding(4)
-        .background(.ultraThinMaterial.opacity(0.6), in: Capsule())
+        .background(Color.black.opacity(0.25), in: Capsule())
         .animation(.easeOut(duration: 0.15), value: active)
     }
 
     private var pinchToZoom: some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                guard let zoom else { return }
+                guard zoom != nil else { return }
                 let start = pinchStart ?? zoomFactor
                 pinchStart = start
                 setZoom(start * Double(value.magnification), animated: false)

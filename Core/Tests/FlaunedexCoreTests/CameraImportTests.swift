@@ -79,7 +79,7 @@ struct LibraryPhotoTests {
         return try #require(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any])
     }
 
-    private func type(of data: Data) throws -> String? {
+    private func imageType(of data: Data) throws -> String? {
         let source = try #require(CGImageSourceCreateWithData(data as CFData, nil))
         return CGImageSourceGetType(source) as String?
     }
@@ -115,7 +115,7 @@ struct LibraryPhotoTests {
 
     @Test func aPNGWithNothingBecomesAPlainJPEG() throws {
         let photo = try #require(LibraryPhoto(try makeImage(width: 20, height: 10, type: "public.png")))
-        #expect(try type(of: photo.jpeg) == "public.jpeg")
+        #expect(try imageType(of: photo.jpeg) == "public.jpeg")
         #expect(photo.takenAt == nil)
         #expect(photo.latitude == nil)
     }
