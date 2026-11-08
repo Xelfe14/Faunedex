@@ -165,6 +165,14 @@ then the species with its spécificité and fun fact, or the candidates to choos
 is unsure, or a retry. Closed before the result, a pill above the tab bar keeps following it. A photo
 that still has no position is counted above the map, with a picker to place it by hand.
 
+The camera zooms with a pinch or with one button per lens, as in the Camera app (1× and 2× on an
+iPhone XS; 0,5× to 5× on a Pro): it runs on the phone's multi-lens camera, which changes lens by
+itself as the zoom goes. The button left of the shutter brings in a photo from the library instead,
+through the system picker (no permission needed). It goes through the same queue and analysis, as an
+upright JPEG with the place and date read from its metadata, so it lands on the map where it was
+taken and in the journal on its own day. The current position is never used for it; a photo with no
+place goes to the ones to place by hand.
+
 Below the result, a **conversation**: ask Gemini anything about the species or the photo ("mâle ou
 femelle ?", "est-il protégé ?"). Each question goes with the photo (the same small, GPS-free copy),
 what the identification said and the conversation so far; the prompt forbids edibility and medicinal
@@ -306,8 +314,9 @@ is planned for a future version.
 
 ### Known limitations
 
-- The camera path (AVFoundation capture + GPS injection) compiles and its GPS logic is unit-tested,
-  but it can only be exercised on a physical device.
+- The camera path (AVFoundation capture + GPS injection, and the zoom) compiles and its GPS and zoom
+  logic is unit-tested, but it can only be exercised on a physical device. The library import's
+  conversion and metadata reading are unit-tested; the picker itself is the system's.
 - SwiftUI's `Map` has no built-in clustering; `SightingsMapView` is isolated so an `MKMapView`
   wrapper can replace it if pin counts grow.
 - CloudKit sync needs the paid account (and, only for TestFlight, a Production schema deploy) — see

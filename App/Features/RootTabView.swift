@@ -92,7 +92,7 @@ struct RootTabView: View {
     @Query(sort: \Sighting.capturedAt, order: .reverse) private var previewSightings: [Sighting]
 
     private static let previewApps: [String: AppSection] = [
-        "nature": .nature, "pastille": .nature,
+        "nature": .nature, "pastille": .nature, "capture": .nature,
         "cuisine": .cuisine,
         "savoirs": .savoirs, "reviser": .savoirs,
     ]
@@ -211,7 +211,11 @@ struct RootTabView: View {
     @ViewBuilder private func app(_ section: AppSection) -> some View {
         switch section {
         case .nature:
+            #if DEBUG
+            NatureTabs(start: previewScreen == "capture" ? .capture : .faune)
+            #else
             NatureTabs(start: .faune)
+            #endif
         case .cuisine:
             CuisineTabs(start: .recettes)
         case .savoirs:

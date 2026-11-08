@@ -13,7 +13,7 @@ import FlaunedexCore
 /// call it from the main actor, configuration and start/stop run on
 /// `sessionQueue`, and `AVCapturePhotoOutput` delivers its delegate callback on
 /// a queue of its own choosing. The mutable state is therefore split
-/// deliberately: `isConfigured` is only ever read or written on `sessionQueue`,
+/// deliberately: `isConfigured` and `device` are only ever read or written on `sessionQueue`,
 /// and the pending continuation plus its location are guarded by `lock`. That
 /// discipline is what `@unchecked Sendable` is asserting here.
 final class CameraModel: NSObject, @unchecked Sendable, AVCapturePhotoCaptureDelegate {
@@ -29,32 +29,89 @@ final class CameraModel: NSObject, @unchecked Sendable, AVCapturePhotoCaptureDel
 
     /// Only touched on `sessionQueue`.
     private var isConfigured = false
+    private var device: AVCaptureDevice?
 
     var authorization: AVAuthorizationStatus { AVCaptureDevice.authorizationStatus(for: .video) }
 
     enum CameraError: Error { case notAuthorized, configurationFailed, captureFailed }
 
+    /// The zoom the camera offers, and where it is now.
+    struct ZoomState: Sendable {
+        let zoom: CameraZoom
+        let factor: Double
+    }
+
     func requestAccess() async -> Bool {
         await AVCaptureDevice.requestAccess(for: .video)
     }
 
-    func configure() {
-        let session = self.session
-        let output = self.output
+    /// Set the session up once, and say how it can zoom. Nil without a camera
+    /// (the simulator) or before access is granted.
+    func configure() async -> ZoomState? {
+        await withCheckedContinuation { (cont: CheckedContinuation<ZoomState?, Never>) in
+            sessionQueue.async { [weak self] in
+                guard let self else { return cont.resume(returning: nil) }
+                if !self.isConfigured { self.setUp() }
+                cont.resume(returning: self.device.map {
+                    ZoomState(zoom: Self.zoom(of: $0), factor: Double($0.videoZoomFactor))
+                })
+            }
+        }
+    }
+
+    /// On `sessionQueue`.
+    private func setUp() {
+        session.beginConfiguration()
+        session.sessionPreset = .photo
+        defer { session.commitConfiguration() }
+
+        // The multi-lens camera when there is one, so zooming moves on to the
+        // telephoto (or back to the ultra-wide) by itself, as in the Camera app.
+        let discovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera, .builtInWideAngleCamera],
+            mediaType: .video, position: .back
+        )
+        guard let device = discovery.devices.first,
+              let input = try? AVCaptureDeviceInput(device: device),
+              session.canAddInput(input) else { return }
+        session.addInput(input)
+
+        guard session.canAddOutput(output) else { return }
+        session.addOutput(output)
+
+        // Open on the main lens, not on the ultra-wide a multi-lens camera's
+        // factor 1 stands for.
+        let main = Self.zoom(of: device).mainFactor
+        if main != 1, (try? device.lockForConfiguration()) != nil {
+            device.videoZoomFactor = CGFloat(main)
+            device.unlockForConfiguration()
+        }
+        self.device = device
+        isConfigured = true
+    }
+
+    private static func zoom(of device: AVCaptureDevice) -> CameraZoom {
+        CameraZoom(
+            minFactor: Double(device.minAvailableVideoZoomFactor),
+            maxFactor: Double(device.maxAvailableVideoZoomFactor),
+            switchOverFactors: device.virtualDeviceSwitchOverVideoZoomFactors.map(\.doubleValue),
+            hasUltraWide: device.constituentDevices.contains { $0.deviceType == .builtInUltraWideCamera }
+        )
+    }
+
+    /// Zoom to a device factor, gliding there for a button, at once for a pinch.
+    func setZoom(_ factor: Double, animated: Bool) {
         sessionQueue.async { [weak self] in
-            guard let self, !self.isConfigured else { return }
-            session.beginConfiguration()
-            session.sessionPreset = .photo
-            defer { session.commitConfiguration() }
-
-            guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
-                  let input = try? AVCaptureDeviceInput(device: device),
-                  session.canAddInput(input) else { return }
-            session.addInput(input)
-
-            guard session.canAddOutput(output) else { return }
-            session.addOutput(output)
-            self.isConfigured = true
+            guard let device = self?.device, (try? device.lockForConfiguration()) != nil else { return }
+            defer { device.unlockForConfiguration() }
+            let target = CGFloat(min(max(factor, Double(device.minAvailableVideoZoomFactor)),
+                                     Double(device.maxAvailableVideoZoomFactor)))
+            if animated {
+                device.ramp(toVideoZoomFactor: target, withRate: 8)
+            } else {
+                device.cancelVideoZoomRamp()
+                device.videoZoomFactor = target
+            }
         }
     }
 

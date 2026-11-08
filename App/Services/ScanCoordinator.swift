@@ -35,13 +35,16 @@ final class ScanCoordinator {
     }
 
     /// Persist a captured photo + GPS as a queued sighting. Returns immediately;
-    /// identification happens later in `processQueue()`.
+    /// identification happens later in `processQueue()`. A photo from the
+    /// library passes the date it was taken.
     @discardableResult
-    func enqueueCapture(imageData: Data, latitude: Double, longitude: Double, accuracy: Double) throws -> Sighting {
+    func enqueueCapture(imageData: Data, latitude: Double, longitude: Double, accuracy: Double,
+                        capturedAt: Date = .now) throws -> Sighting {
         let id = UUID()
         let path = try photos.save(imageData, id: id)
         let sighting = Sighting(id: id, photoRelativePath: path,
-                                latitude: latitude, longitude: longitude, horizontalAccuracy: accuracy)
+                                latitude: latitude, longitude: longitude, horizontalAccuracy: accuracy,
+                                capturedAt: capturedAt)
         context.insert(sighting)
         try context.save()
         lastCapture = sighting

@@ -76,8 +76,14 @@ public enum ExifGPS {
     /// into signed degrees. Returns nil when there is no GPS block.
     public static func readCoordinate(from imageData: Data) -> (latitude: Double, longitude: Double)? {
         guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
-              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any],
-              let gps = props[kCGImagePropertyGPSDictionary as String] as? [String: Any],
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]
+        else { return nil }
+        return coordinate(in: props)
+    }
+
+    /// The coordinate in an image's properties, as ImageIO reads them.
+    static func coordinate(in props: [String: Any]) -> (latitude: Double, longitude: Double)? {
+        guard let gps = props[kCGImagePropertyGPSDictionary as String] as? [String: Any],
               let lat = gps[kCGImagePropertyGPSLatitude as String] as? Double,
               let lon = gps[kCGImagePropertyGPSLongitude as String] as? Double
         else { return nil }
